@@ -28,7 +28,7 @@ namespace EventManagerSystem.Services
 
         public EventModel GetEvent(Guid id)
         {
-            return Events.First(e => e.Id.Equals(id));
+            return Events.FirstOrDefault(e => e.Id.Equals(id));
         }
 
         public EventModel UpdateEvent(Guid id, EventModel eventModel)
