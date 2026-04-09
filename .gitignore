@@ -482,3 +482,5 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+/EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.AssemblyInfo.cs
+/EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.AssemblyInfoInputs.cache
