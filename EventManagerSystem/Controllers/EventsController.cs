@@ -1,4 +1,5 @@
 using EventManagerSystem.Models;
+using EventManagerSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManagerSystem.Controllers
@@ -7,24 +8,28 @@ namespace EventManagerSystem.Controllers
     [Route("events")]
     public class EventsController : ControllerBase
     {
-        private List<EventModel> events = new List<EventModel>();
+        private IEventService _eventService;
         private readonly ILogger<EventsController> _logger;
 
-        public EventsController(ILogger<EventsController> logger)
+        public EventsController(ILogger<EventsController> logger, IEventService eventService)
         {
+            _eventService = eventService;
             _logger = logger;
         }
 
         [HttpGet]
-        public IEnumerable<EventModel> GetAllEvents()
+        public IActionResult GetAllEvents()
         {
-            return (IEnumerable<EventModel>)Ok(events);
+            return Ok(_eventService.GetAllEvents());
         }
 
         [HttpGet("{id}")]
-        public IEnumerable<EventModel> GetEventById(Guid id)
+        public IActionResult GetEventById(Guid id)
         {
-            return (IEnumerable<EventModel>)Ok(events[0]);
+            var _event = _eventService.GetEvent(id);
+            if (_event is not null)
+                return Ok(_event);
+            return NotFound();
         }
 
         [HttpPost]
@@ -34,15 +39,18 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] EventModel model) 
+        public IActionResult Update(Guid id, [FromBody] EventModel model) 
         { 
             return Ok();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public IActionResult Delete(Guid id)
         {
-            return Ok();
+            var isDeletedSuccessfully = _eventService.DeleteEvent(id);
+            if (isDeletedSuccessfully)
+                return NoContent();
+            return NotFound();
         }
     }
 }
