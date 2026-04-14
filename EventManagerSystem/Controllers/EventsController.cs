@@ -1,6 +1,10 @@
+using EventManagerSystem.DTO;
 using EventManagerSystem.Models;
 using EventManagerSystem.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
+using System.Linq.Expressions;
 
 namespace EventManagerSystem.Controllers
 {
@@ -18,13 +22,13 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetAllEvents()
+        public ActionResult<List<EventModel>> GetAllEvents()
         {
             return Ok(_eventService.GetAllEvents());
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetEventById(Guid id)
+        public ActionResult<EventModel> GetEventById(Guid id)
         {
             var _event = _eventService.GetEvent(id);
             if (_event is not null)
@@ -33,15 +37,27 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPost]
-        public IActionResult Post([FromBody] EventModel model)
+        public IActionResult Post([FromBody] CreateEventDto dto)
         {
-            return Ok();
+            if (!ModelState.IsValid)
+                return BadRequest();
+            return Ok(_eventService.CreateEvent(dto));
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(Guid id, [FromBody] EventModel model) 
-        { 
-            return Ok();
+        public IActionResult Update(Guid id, [FromBody] UpdateEventDto eventDto) 
+        {
+            if (!ModelState.IsValid)
+                return BadRequest();
+            try
+            {
+                _eventService.UpdateEvent(id, eventDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -49,7 +65,7 @@ namespace EventManagerSystem.Controllers
         {
             var isDeletedSuccessfully = _eventService.DeleteEvent(id);
             if (isDeletedSuccessfully)
-                return NoContent();
+                return Ok();
             return NotFound();
         }
     }

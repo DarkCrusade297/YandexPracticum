@@ -1,4 +1,5 @@
-﻿using EventManagerSystem.Models;
+﻿using EventManagerSystem.DTO;
+using EventManagerSystem.Models;
 
 namespace EventManagerSystem.Services
 {
@@ -6,8 +7,8 @@ namespace EventManagerSystem.Services
     {
         public EventModel GetEvent(Guid id);
         public List<EventModel> GetAllEvents();
-        public EventModel CreateEvent(EventModel eventModel);
+        public EventModel CreateEvent(CreateEventDto dto);
         public bool DeleteEvent(Guid id);
-        public EventModel UpdateEvent(Guid id,  EventModel eventModel);
+        public EventModel UpdateEvent(Guid id,  UpdateEventDto eventModel);
     }
 }
