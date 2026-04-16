@@ -41,7 +41,8 @@ namespace EventManagerSystem.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest();
-            return Ok(_eventService.CreateEvent(dto));
+            var _event = _eventService.CreateEvent(dto);
+            return CreatedAtAction(nameof(GetEventById), new {id = _event.Id }, _event);
         }
 
         [HttpPut("{id}")]
@@ -65,7 +66,7 @@ namespace EventManagerSystem.Controllers
         {
             var isDeletedSuccessfully = _eventService.DeleteEvent(id);
             if (isDeletedSuccessfully)
-                return Ok();
+                return NoContent();
             return NotFound();
         }
     }

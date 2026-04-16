@@ -1,4 +1,5 @@
 ﻿using EventManagerSystem.DTO;
+using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 
 namespace EventManagerSystem.Services
@@ -41,7 +42,7 @@ namespace EventManagerSystem.Services
             EventModel model = Events.FirstOrDefault(e => e.Id.Equals(id));
             if (model == null)
             {
-                throw new KeyNotFoundException($"Not found Event with id: {id}");
+                throw new EventNotFoundException($"Not found Event with id: {id}");
             }
             model.Title = eventDto.Title;
             model.Description = eventDto.Description;

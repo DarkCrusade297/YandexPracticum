@@ -2,7 +2,7 @@
 
 namespace EventManagerSystem.DTO
 {
-    public class UpdateEventDto
+    public class UpdateEventDto : IValidatableObject
     {
         [Required(ErrorMessage = "Title field is required")]
         public string? Title { get; set; }
