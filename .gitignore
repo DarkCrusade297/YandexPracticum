@@ -484,3 +484,10 @@ $RECYCLE.BIN/
 *.swp
 /EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.AssemblyInfo.cs
 /EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.AssemblyInfoInputs.cache
+/EventManagerSystem/obj/project.nuget.cache
+/EventManagerSystem/obj/EventManagerSystem.csproj.nuget.g.props
+/EventManagerSystem/obj/project.assets.json
+/EventManagerSystem/obj/EventManagerSystem.csproj.nuget.dgspec.json
+/EventManagerSystem/obj/Debug/net8.0/rpswa.dswa.cache.json
+/EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.GeneratedMSBuildEditorConfig.editorconfig
+/EventManagerSystem/obj/Debug/net8.0/EventManagerSystem.assets.cache
