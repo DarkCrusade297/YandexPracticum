@@ -1,10 +1,7 @@
 using EventManagerSystem.DTO;
 using EventManagerSystem.Models;
 using EventManagerSystem.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
-using System.Linq.Expressions;
 
 namespace EventManagerSystem.Controllers
 {
@@ -22,52 +19,38 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet]
-        public ActionResult<List<EventModel>> GetAllEvents()
+        public async Task<ActionResult<List<EventModel>>> GetAllEvents()
         {
-            return Ok(_eventService.GetAllEvents());
+            var events = await _eventService.GetAllEventsAsync();
+            return Ok(events);
         }
 
         [HttpGet("{id}")]
-        public ActionResult<EventModel> GetEventById(Guid id)
+        public async Task<ActionResult<EventModel>> GetEventById(Guid id)
         {
-            var _event = _eventService.GetEvent(id);
-            if (_event is not null)
-                return Ok(_event);
-            return NotFound();
+            var ev = await _eventService.GetEventAsync(id);
+            return Ok(ev);
         }
 
         [HttpPost]
-        public IActionResult Post([FromBody] CreateEventDto dto)
+        public async Task<IActionResult> Post([FromBody] CreateEventDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest();
-            var _event = _eventService.CreateEvent(dto);
-            return CreatedAtAction(nameof(GetEventById), new {id = _event.Id }, _event);
+            var ev = await _eventService.CreateEventAsync(dto);
+            return CreatedAtAction(nameof(GetEventById), new { id = ev.Id }, ev);
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(Guid id, [FromBody] UpdateEventDto eventDto) 
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEventDto eventDto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest();
-            try
-            {
-                _eventService.UpdateEvent(id, eventDto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _eventService.UpdateEventAsync(id, eventDto);
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            var isDeletedSuccessfully = _eventService.DeleteEvent(id);
-            if (isDeletedSuccessfully)
-                return NoContent();
-            return NotFound();
+            await _eventService.DeleteEventAsync(id);
+            return NoContent();
         }
     }
 }
