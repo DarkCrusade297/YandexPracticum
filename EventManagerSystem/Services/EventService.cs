@@ -30,7 +30,7 @@ namespace EventManagerSystem.Services
             return Task.CompletedTask;
         }
 
-        public Task<List<EventModel>> GetAllEventsAsync(string? title, DateTime? from, DateTime? to)
+        public Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
         {
             var ens = Events.AsQueryable();
 
@@ -43,7 +43,18 @@ namespace EventManagerSystem.Services
             if (to.HasValue)
                 ens = ens.Where(e => e.EndAt <= to.Value);
 
-            return Task.FromResult(ens.ToList());
+            if (!page.HasValue)
+                page = 1;
+
+            if (!pageSize.HasValue)
+                pageSize = 10;
+
+            var ensCount = ens.Count();
+
+            ens = ens.Skip(((int)page - 1) * (int)pageSize)
+                .Take((int)pageSize);
+
+            return Task.FromResult(new PaginatedResultDto { total = ensCount, events = ens.ToList(), pageSize = (int)pageSize, currentPage = (int)page });
         }
 
         public Task<EventModel> GetEventAsync(Guid id)
