@@ -2,6 +2,7 @@
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace EventManagerSystem.Services
 {
@@ -10,12 +11,6 @@ namespace EventManagerSystem.Services
         public List<EventModel> Events { get; set; } = new List<EventModel>();
         public Task<EventModel> CreateEventAsync(CreateEventDto eventDto)
         {
-            if (string.IsNullOrWhiteSpace(eventDto.Title))
-                throw new ValidationException("Title is required");
-
-            if (Events.Any(e => e.Title == eventDto.Title))
-                throw new ConflictException($"Event with title '{eventDto.Title}' already exists");
-
             var eventModel = new EventModel(eventDto.Title,
                 eventDto.Description,
                 eventDto.StartAt,
@@ -35,9 +30,20 @@ namespace EventManagerSystem.Services
             return Task.CompletedTask;
         }
 
-        public Task<List<EventModel>> GetAllEventsAsync()
+        public Task<List<EventModel>> GetAllEventsAsync(string? title, DateTime? from, DateTime? to)
         {
-            return Task.FromResult(Events);
+            var ens = Events.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(title))
+               ens = ens.Where(e => e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+
+            if (from.HasValue)
+                ens = ens.Where(e => e.StartAt >= from.Value);
+
+            if (to.HasValue)
+                ens = ens.Where(e => e.EndAt <= to.Value);
+
+            return Task.FromResult(ens.ToList());
         }
 
         public Task<EventModel> GetEventAsync(Guid id)

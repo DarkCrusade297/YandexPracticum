@@ -19,9 +19,10 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<EventModel>>> GetAllEvents()
+        public async Task<ActionResult<List<EventModel>>> GetAllEvents([FromQuery] string? title, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
-            var events = await _eventService.GetAllEventsAsync();
+
+            var events = await _eventService.GetAllEventsAsync(title, from, to);
             return Ok(events);
         }
 
