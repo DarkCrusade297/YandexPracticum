@@ -11,6 +11,13 @@ namespace EventManagerSystem.Services
         public List<EventModel> Events { get; set; } = new List<EventModel>();
         public Task<EventModel> CreateEventAsync(CreateEventDto eventDto)
         {
+            var context = new ValidationContext(eventDto);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(eventDto, context, results, validateAllProperties: true);
+
+            if (!isValid)
+                throw new ValidationException(results.First().ErrorMessage);
+
             var eventModel = new EventModel(eventDto.Title,
                 eventDto.Description,
                 eventDto.StartAt,
@@ -73,6 +80,13 @@ namespace EventManagerSystem.Services
 
             if (string.IsNullOrWhiteSpace(eventDto.Title))
                 throw new ValidationException("Title is required");
+
+            var context = new ValidationContext(eventDto);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(eventDto, context, results, validateAllProperties: true);
+
+            if (!isValid)
+                throw new ValidationException(results.First().ErrorMessage);
 
             model.Title = eventDto.Title;
             model.Description = eventDto.Description;

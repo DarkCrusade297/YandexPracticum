@@ -30,32 +30,32 @@ namespace EventManagerSystem.Middleware
         }
 
         private async Task HandleException(HttpContext httpContext, Exception ex)
-    {
-        _logger.LogError(
-            ex,
-            "Unhandled exception. Method={Method}, Path={Path}, RequestId={RequestId}",
-            httpContext.Request.Method,
-            httpContext.Request.Path,
-            httpContext.Request.Headers["x-request-id"]);
-            
-        if (httpContext.Response.HasStarted)
         {
-            return;
+            _logger.LogError(
+                ex,
+                "Unhandled exception. Method={Method}, Path={Path}, RequestId={RequestId}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                httpContext.Request.Headers["x-request-id"]);
+
+            if (httpContext.Response.HasStarted)
+            {
+                return;
+            }
+
+            var statusCode = StatusCodeMapping(ex);
+
+            httpContext.Response.StatusCode = statusCode.StatusCode;
+            httpContext.Response.ContentType = "application/json";
+
+            var error = new ProblemDetails
+            {
+                Status = statusCode.StatusCode,
+                Detail = ex.Message
+            };
+
+            await httpContext.Response.WriteAsJsonAsync(error);
         }
-
-        var statusCode = StatusCodeMapping(ex);
-        
-        httpContext.Response.StatusCode = statusCode.StatusCode;
-        httpContext.Response.ContentType = "application/json";
-
-        var error = new ProblemDetails
-        {
-            Status = statusCode.StatusCode,
-            Detail = ex.Message
-        };
-
-        await httpContext.Response.WriteAsJsonAsync(error);
-    }
 
         private static (int StatusCode, string Message) StatusCodeMapping(Exception ex)
             => ex switch

@@ -19,8 +19,8 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PaginatedResultDto>> GetAllEvents([FromQuery] string? title, 
-            [FromQuery] DateTime? from, 
+        public async Task<ActionResult<PaginatedResultDto>> GetAllEvents([FromQuery] string? title,
+            [FromQuery] DateTime? from,
             [FromQuery] DateTime? to,
             [FromQuery] int? page,
             [FromQuery] int? pageSize)
@@ -38,21 +38,21 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] CreateEventDto dto)
+        public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto dto)
         {
             var ev = await _eventService.CreateEventAsync(dto);
             return CreatedAtAction(nameof(GetEventById), new { id = ev.Id }, ev);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEventDto eventDto)
+        public async Task<IActionResult> UpdateEventById(Guid id, [FromBody] UpdateEventDto eventDto)
         {
             await _eventService.UpdateEventAsync(id, eventDto);
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> DeleteEventById(Guid id)
         {
             await _eventService.DeleteEventAsync(id);
             return NoContent();

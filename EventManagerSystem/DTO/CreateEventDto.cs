@@ -5,6 +5,7 @@ namespace EventManagerSystem.DTO
     public class CreateEventDto : IValidatableObject
     {
         [Required(ErrorMessage = "Title field is required")]
+        [MinLength(1, ErrorMessage = "Title cannot be empty")]
         public string? Title { get; set; }
         public string? Description { get; set; }
         [Required(ErrorMessage = "StartAt field is required")]
