@@ -43,15 +43,15 @@ namespace EventManagerSystem.Middleware
                 return;
             }
 
-            var statusCode = StatusCodeMapping(ex);
+            var (statusCode, message)  = StatusCodeMapping(ex);
 
-            httpContext.Response.StatusCode = statusCode.StatusCode;
+            httpContext.Response.StatusCode = statusCode;
             httpContext.Response.ContentType = "application/json";
 
             var error = new ProblemDetails
             {
-                Status = statusCode.StatusCode,
-                Detail = ex.Message
+                Status = statusCode,
+                Detail = message
             };
 
             await httpContext.Response.WriteAsJsonAsync(error);
