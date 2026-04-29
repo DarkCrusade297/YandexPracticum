@@ -5,10 +5,10 @@ namespace EventManagerSystem.Services
 {
     public interface IEventService
     {
-        public EventModel GetEvent(Guid id);
-        public List<EventModel> GetAllEvents();
-        public EventModel CreateEvent(CreateEventDto dto);
-        public bool DeleteEvent(Guid id);
-        public EventModel UpdateEvent(Guid id,  UpdateEventDto eventModel);
+        Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize);
+        Task<EventModel?> GetEventAsync(Guid id);
+        Task<EventModel> CreateEventAsync(CreateEventDto dto);
+        Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto dto);
+        Task DeleteEventAsync(Guid id);
     }
 }
