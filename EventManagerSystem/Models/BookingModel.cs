@@ -1,0 +1,21 @@
+﻿using EventManagerSystem.Enums;
+using System.Diagnostics.CodeAnalysis;
+
+namespace EventManagerSystem.Models
+{
+    public class BookingModel
+    {
+        public required Guid Id { get; init; } = Guid.NewGuid();
+        public required Guid EventId { get; init; }
+        public required BookingStatus Status { get; set; } = BookingStatus.Pending;
+        public required DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+        public DateTime? ProcessedAt { get; init; }
+
+        [SetsRequiredMembers]
+        public BookingModel(Guid eventId, DateTime? processedAt)
+        {
+            EventId = eventId;
+            ProcessedAt = processedAt;
+        }
+    }
+}
