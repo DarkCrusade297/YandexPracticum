@@ -1,9 +1,12 @@
-﻿namespace EventManagerSystem.Enums
+﻿using System.Text.Json.Serialization;
+
+namespace EventManagerSystem.Enums
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum BookingStatus
     {
-        Pending = 1,
-        Confirmed = 2,
-        Rejected = 0
+        Pending,
+        Confirmed,
+        Rejected
     }
 }
