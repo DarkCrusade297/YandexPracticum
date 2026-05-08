@@ -1,6 +1,6 @@
 ﻿using EventManagerSystem.Models;
 
-namespace EventManagerSystem.DTO
+namespace EventManagerSystem.DTO.Events
 {
     public class PaginatedResultDto
     {

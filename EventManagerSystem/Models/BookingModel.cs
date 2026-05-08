@@ -9,7 +9,7 @@ namespace EventManagerSystem.Models
         public required Guid EventId { get; init; }
         public required BookingStatus Status { get; set; } = BookingStatus.Pending;
         public required DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-        public DateTime? ProcessedAt { get; init; }
+        public DateTime? ProcessedAt { get; set; }
 
         [SetsRequiredMembers]
         public BookingModel(Guid eventId, DateTime? processedAt)

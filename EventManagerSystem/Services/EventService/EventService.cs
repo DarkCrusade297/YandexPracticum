@@ -1,10 +1,10 @@
-﻿using EventManagerSystem.DTO;
+﻿using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace EventManagerSystem.Services
+namespace EventManagerSystem.Services.EventService
 {
     public class EventService : IEventService
     {

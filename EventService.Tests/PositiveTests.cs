@@ -1,4 +1,5 @@
 ﻿using EventManagerSystem.DTO;
+using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Models;
 using Microsoft.Extensions.Logging;
 
@@ -6,7 +7,7 @@ namespace EventService.Tests;
 
 public class PositiveTests
 {
-    private readonly EventManagerSystem.Services.EventService _sut = new EventManagerSystem.Services.EventService();
+    private readonly EventManagerSystem.Services.EventService.EventService _sut = new EventManagerSystem.Services.EventService.EventService();
 
     [Fact]
     public async Task CreateEventAsync_ValidDto_ReturnsCreatedEvent()

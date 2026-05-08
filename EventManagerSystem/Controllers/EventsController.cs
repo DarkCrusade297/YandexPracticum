@@ -1,4 +1,4 @@
-using EventManagerSystem.DTO;
+using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Models;
 using EventManagerSystem.Services;
 using Microsoft.AspNetCore.Mvc;
