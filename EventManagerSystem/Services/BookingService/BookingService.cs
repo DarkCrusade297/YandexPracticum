@@ -2,7 +2,6 @@
 using EventManagerSystem.Enums;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
-using Microsoft.Extensions.Logging;
 
 namespace EventManagerSystem.Services.BookingService
 {
@@ -10,21 +9,19 @@ namespace EventManagerSystem.Services.BookingService
     {
         public List<BookingModel> Bookings { get; set; } = new List<BookingModel>();
         private IEventService eventService;
-        private readonly ILogger<BookingService> _logger;
 
-        public BookingService(IEventService eventService, ILogger<BookingService> logger)
+        public BookingService(IEventService eventService)
         {
             this.eventService = eventService;
-            this._logger = logger;
         }
 
-        public Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
+        public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
         {
-            eventService.GetEventAsync(eventId).Wait();
+            await eventService.GetEventAsync(eventId);
             var bk = new BookingModel(eventId, null);
             Bookings.Add(bk);
             var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status};
-            return Task.FromResult(cbkdto);
+            return cbkdto;
         }
 
         public Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)

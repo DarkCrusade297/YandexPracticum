@@ -2,7 +2,6 @@
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 
 namespace EventManagerSystem.Services.EventService
 {

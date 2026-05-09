@@ -54,7 +54,7 @@
                 {
                     _logger.LogInformation($"Обработка бронирования {booking.Id}");
 
-                    await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
                     await bookingService.ConfirmBookingAsync(booking.Id);
 

@@ -1,7 +1,5 @@
-﻿using EventManagerSystem.DTO;
-using EventManagerSystem.DTO.Events;
+﻿using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Models;
-using Microsoft.Extensions.Logging;
 
 namespace EventService.Tests;
 
