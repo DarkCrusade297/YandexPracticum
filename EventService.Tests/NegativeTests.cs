@@ -1,4 +1,5 @@
 ﻿using EventManagerSystem.DTO;
+using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using System;
@@ -12,7 +13,7 @@ namespace EventService.Tests
 {
     public class NegativeTests
     {
-        private readonly EventManagerSystem.Services.EventService _sut = new EventManagerSystem.Services.EventService();
+        private readonly EventManagerSystem.Services.EventService.EventService _sut = new EventManagerSystem.Services.EventService.EventService();
         [Fact]
         public async Task GetEventByIdAsync_NonExistingId_ThrowsNotFoundException()
         {

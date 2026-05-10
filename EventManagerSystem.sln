@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventManagerSystem", "Event
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventService.Tests", "EventService.Tests\EventService.Tests.csproj", "{D3767B7F-2A69-49B8-82E9-B675120C6852}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookingServices.Tests", "BookingServices.Tests\BookingServices.Tests.csproj", "{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{D3767B7F-2A69-49B8-82E9-B675120C6852}.Release|x64.Build.0 = Release|Any CPU
 		{D3767B7F-2A69-49B8-82E9-B675120C6852}.Release|x86.ActiveCfg = Release|Any CPU
 		{D3767B7F-2A69-49B8-82E9-B675120C6852}.Release|x86.Build.0 = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|x64.Build.0 = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Debug|x86.Build.0 = Debug|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|x64.ActiveCfg = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|x64.Build.0 = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|x86.ActiveCfg = Release|Any CPU
+		{BB89424F-146A-42FB-9876-7BCDD5BCFEE6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

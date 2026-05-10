@@ -1,0 +1,14 @@
+﻿using EventManagerSystem.DTO.Bookings;
+using EventManagerSystem.Models;
+
+namespace EventManagerSystem.Services.BookingService
+{
+    public interface IBookingService
+    {
+        Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId);
+        Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId);
+
+        Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
+        Task ConfirmBookingAsync(Guid bookingId);
+    }
+}

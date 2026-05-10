@@ -1,5 +1,7 @@
 using EventManagerSystem.Middleware;
 using EventManagerSystem.Services;
+using EventManagerSystem.Services.BookingService;
+using EventManagerSystem.Services.EventService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IEventService, EventService>();
+builder.Services.AddSingleton<IBookingService, BookingService>();
+builder.Services.AddHostedService<BookingProcessorService>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

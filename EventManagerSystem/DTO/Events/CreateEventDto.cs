@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace EventManagerSystem.DTO
+namespace EventManagerSystem.DTO.Events
 {
     public class CreateEventDto : IValidatableObject
     {
