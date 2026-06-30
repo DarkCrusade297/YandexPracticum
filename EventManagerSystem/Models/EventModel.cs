@@ -9,18 +9,14 @@ namespace EventManagerSystem.Models
         public string? Description { get; set; }
         public required DateTime? StartAt { get; set; }
         public required DateTime? EndAt { get; set; }
-        public required int? TotalSeats { get; set; }
-        public required int? AvailableSeats { get; set; }
 
         [SetsRequiredMembers]
-        public EventModel(string? title, string? description, DateTime? startAt, DateTime? endAt, int? totalSeats)
+        public EventModel(string? title, string? description, DateTime? startAt, DateTime? endAt)
         {
             Title = title;
             Description = description;
             StartAt = startAt;
             EndAt = endAt;
-            TotalSeats = totalSeats;
-            AvailableSeats = totalSeats;
         }
     }
 }

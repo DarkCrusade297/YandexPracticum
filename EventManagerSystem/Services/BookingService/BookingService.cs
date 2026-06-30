@@ -9,7 +9,6 @@ namespace EventManagerSystem.Services.BookingService
     {
         public List<BookingModel> Bookings { get; set; } = new List<BookingModel>();
         private IEventService eventService;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public BookingService(IEventService eventService)
         {
@@ -20,19 +19,9 @@ namespace EventManagerSystem.Services.BookingService
         {
             await eventService.GetEventAsync(eventId);
             var bk = new BookingModel(eventId, null);
-            await _semaphore.WaitAsync(new CancellationToken());
-            try
-            {
-                eventService.TryReserveSeats(eventId);
-            }
-            finally
-            { 
-                _semaphore.Release(); 
-            }
             Bookings.Add(bk);
-            var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status };
+            var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status};
             return cbkdto;
-
         }
 
         public Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)
