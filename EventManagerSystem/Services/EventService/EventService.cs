@@ -20,7 +20,8 @@ namespace EventManagerSystem.Services.EventService
             var eventModel = new EventModel(eventDto.Title,
                 eventDto.Description,
                 eventDto.StartAt,
-                eventDto.EndAt);
+                eventDto.EndAt,
+                eventDto.TotalSeats);
 
             Events.Add(eventModel);
             return Task.FromResult(eventModel);
@@ -69,6 +70,25 @@ namespace EventManagerSystem.Services.EventService
             if (ev == null)
                 throw new NotFoundException($"Event with id {id} not found");
             return Task.FromResult(ev);
+        }
+
+        public Task<bool> ReleaseSeats(Guid id, int count = 1)
+        {
+            var model = Events.FirstOrDefault(e => e.Id == id);
+            if (model.AvailableSeats >= 1)
+            {
+                model.AvailableSeats -= count;
+                return Task.FromResult(true);
+            }
+            else
+                return Task.FromResult(false);
+        }
+
+        public Task<bool> TryReserveSeats(Guid id, int count = 1)
+        {
+            var model = Events.FirstOrDefault(e => e.Id == id);
+            model.AvailableSeats += count;
+            return Task.FromResult(true);
         }
 
         public Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)

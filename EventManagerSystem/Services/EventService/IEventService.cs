@@ -10,5 +10,7 @@ namespace EventManagerSystem.Services
         Task<EventModel> CreateEventAsync(CreateEventDto dto);
         Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto dto);
         Task DeleteEventAsync(Guid id);
+        Task<bool> TryReserveSeats(Guid id, int count = 1);
+        Task<bool> ReleaseSeats(Guid id, int count = 1);
     }
 }
