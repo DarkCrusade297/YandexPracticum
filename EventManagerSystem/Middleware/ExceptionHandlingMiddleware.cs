@@ -63,6 +63,7 @@ namespace EventManagerSystem.Middleware
                 NotFoundException nfe => (StatusCodes.Status404NotFound, ex.Message),
                 ValidationException ve => (StatusCodes.Status400BadRequest, ex.Message),
                 ConflictException ce => (StatusCodes.Status409Conflict, ex.Message),
+                NoAvailableSeatsException nase => (StatusCodes.Status409Conflict, ex.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
             };
     }

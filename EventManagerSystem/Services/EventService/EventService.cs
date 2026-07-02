@@ -72,26 +72,26 @@ namespace EventManagerSystem.Services.EventService
             return Task.FromResult(ev);
         }
 
-        public Task<bool> ReleaseSeats(Guid id, int count = 1)
+        public bool ReleaseSeats(Guid id, int count = 1)
         {
             var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
             if (ev == null)
-                return Task.FromResult(false);
+                return false;
             if (ev.AvailableSeats == ev.TotalSeats)
-                return Task.FromResult(false);
+                return false;
             ev.AvailableSeats += count;
-            return Task.FromResult(true);
+            return true;
         }
 
-        public Task<bool> TryReserveSeats(Guid id, int count = 1)
+        public bool TryReserveSeats(Guid id, int count = 1)
         {
             var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
             if (ev == null)
-                return Task.FromResult(false);
+                return false;
             if (ev.AvailableSeats < 1)
-                return Task.FromResult(false);
+                return false;
             ev.AvailableSeats -= count;
-            return Task.FromResult(true);
+            return true;
         }
 
         public Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
