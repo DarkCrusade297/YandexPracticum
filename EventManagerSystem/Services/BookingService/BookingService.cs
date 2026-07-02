@@ -7,9 +7,9 @@ namespace EventManagerSystem.Services.BookingService
 {
     public class BookingService : IBookingService
     {
-        public List<BookingModel> Bookings { get; set; } = new List<BookingModel>();
+        private readonly List<BookingModel> _bookings = new();
         private IEventService eventService;
-        private readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1,1);
+        private readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
 
         public BookingService(IEventService eventService)
         {
@@ -26,7 +26,7 @@ namespace EventManagerSystem.Services.BookingService
                 if (!tryReserve)
                     throw new NoAvailableSeatsException("No available seats for this event");
                 var bk = new BookingModel(eventId, null);
-                Bookings.Add(bk);
+                _bookings.Add(bk);
                 var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status };
                 return cbkdto;
             }
@@ -36,26 +36,69 @@ namespace EventManagerSystem.Services.BookingService
             }
         }
 
-        public Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)
+        public async Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)
         {
-            var bk = Bookings.FirstOrDefault(e => e.Id.Equals(bookingId));
-            if (bk == null)
-                throw new NotFoundException($"Booking with id {bookingId} not found");
-            var getBooking = new GetBookingDto { Id =  bookingId, Status = bk.Status, ProcessedAt = bk.ProcessedAt };
-            return Task.FromResult(getBooking);
+            await _bookingLock.WaitAsync(new CancellationToken());
+
+            try
+            {
+                var booking = _bookings.FirstOrDefault(e => e.Id == bookingId);
+
+                if (booking is null)
+                {
+                    throw new NotFoundException($"Booking with id {bookingId} not found");
+                }
+
+                return new GetBookingDto
+                {
+                    Id = booking.Id,
+                    Status = booking.Status,
+                    ProcessedAt = booking.ProcessedAt
+                };
+            }
+            finally
+            {
+                _bookingLock.Release();
+            }
         }
 
         public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
         {
-            return Bookings.Where(b => b.Status == BookingStatus.Pending);
+            await _bookingLock.WaitAsync(new CancellationToken());
+
+            try
+            {
+                return _bookings
+                    .Where(b => b.Status == BookingStatus.Pending)
+                    .ToList();
+            }
+            finally
+            {
+                _bookingLock.Release();
+            }
         }
 
-        public Task ConfirmBookingAsync(Guid bookingId)
+        public async Task ConfirmBookingAsync(Guid bookingId)
         {
-            var booking = Bookings.First(x => x.Id == bookingId);
-            booking.Status = BookingStatus.Confirmed;
-            booking.ProcessedAt = DateTime.UtcNow;
-            return Task.CompletedTask;
+            await _bookingLock.WaitAsync(new CancellationToken());
+
+            try
+            {
+                var booking = _bookings.FirstOrDefault(x => x.Id == bookingId);
+
+                if (booking is null)
+                {
+                    throw new NotFoundException($"Booking with id {bookingId} not found");
+                }
+
+                booking.Status = BookingStatus.Confirmed;
+                booking.ProcessedAt = DateTime.UtcNow;
+            }
+            finally
+            {
+                _bookingLock.Release();
+
+            }
         }
     }
 }
