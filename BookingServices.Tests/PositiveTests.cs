@@ -4,6 +4,7 @@ using EventManagerSystem.Models;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Moq;
 
 namespace BookingServices.Tests
@@ -111,9 +112,10 @@ namespace BookingServices.Tests
             };
 
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
-            var _booking = await _bookingService.CreateBookingAsync(createdEvent.Id);
-
-            await _bookingService.ConfirmBookingAsync(_booking.Id);
+            var _bookingCreatedDto = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var _bookingDto = await _bookingService.GetBookingByIdAsync(_bookingCreatedDto.Id);
+            var _booking = new BookingModel(_bookingCreatedDto.Id, createdEvent.Id, _bookingCreatedDto.Status, _bookingDto.ProcessedAt);
+            await _bookingService.UpdateBookingAsync(_booking);
 
             //Act
             var createdBooking = await _bookingService.GetBookingByIdAsync(_booking.Id);

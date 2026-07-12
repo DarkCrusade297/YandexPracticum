@@ -78,27 +78,49 @@ namespace EventManagerSystem.Services.BookingService
             }
         }
 
-        public async Task ConfirmBookingAsync(Guid bookingId)
+        public async Task UpdateBookingAsync(BookingModel bookingForUpdating)
         {
             await _bookingLock.WaitAsync(new CancellationToken());
 
             try
             {
-                var booking = _bookings.FirstOrDefault(x => x.Id == bookingId);
 
+                var booking = _bookings.FirstOrDefault(x => x.Id == bookingForUpdating.Id);     
                 if (booking is null)
                 {
-                    throw new NotFoundException($"Booking with id {bookingId} not found");
+                    throw new NotFoundException($"Booking with id {bookingForUpdating.Id} not found");
                 }
-
                 booking.Status = BookingStatus.Confirmed;
                 booking.ProcessedAt = DateTime.UtcNow;
             }
             finally
             {
                 _bookingLock.Release();
-
             }
         }
+
+        public async Task RejectBookingAsync(BookingModel bookingForRejecting)
+        {
+            EventModel _event = null;
+            try
+            {
+                _event = await eventService.GetEventAsync(bookingForRejecting.EventId);          
+            }
+            catch (NotFoundException ex)
+            {
+
+            }
+            finally
+            {
+                if (_event != null)
+                {
+                    eventService.ReleaseSeats(_event.Id);
+                }
+                bookingForRejecting.Status = BookingStatus.Rejected;
+                bookingForRejecting.ProcessedAt = DateTime.UtcNow;
+            }
+        }
+
+
     }
 }

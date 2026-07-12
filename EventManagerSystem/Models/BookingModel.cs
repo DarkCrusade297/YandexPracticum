@@ -17,5 +17,14 @@ namespace EventManagerSystem.Models
             EventId = eventId;
             ProcessedAt = processedAt;
         }
+
+        [SetsRequiredMembers]
+        public BookingModel(Guid id, Guid eventId, BookingStatus status, DateTime? processedAt)
+        {
+            Id = id;
+            EventId = eventId;
+            Status = status;
+            ProcessedAt = processedAt;
+        }
     }
 }
