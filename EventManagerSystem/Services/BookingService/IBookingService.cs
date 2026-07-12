@@ -9,7 +9,7 @@ namespace EventManagerSystem.Services.BookingService
         Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId);
 
         Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
-        Task UpdateBookingAsync(BookingModel booking);
-        Task RejectBookingAsync(BookingModel bookingForRejecting);
+        Task UpdateBookingAsync(Guid booking);
+        Task RejectBookingAsync(Guid bookingForRejecting);
     }
 }

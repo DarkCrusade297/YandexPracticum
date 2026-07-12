@@ -51,13 +51,13 @@ namespace EventManagerSystem.Services.BookingService
                 {
                     var _event = _eventService.GetEventAsync(booking.EventId);
 
-                    await _bookingService.UpdateBookingAsync(booking);
+                    await _bookingService.UpdateBookingAsync(booking.Id);
 
                     _logger.LogWarning($"Бронирование {booking.Id} подтверждено");
                 }
                 catch (NotFoundException ex)
                 {
-                    await _bookingService.RejectBookingAsync(booking);
+                    await _bookingService.RejectBookingAsync(booking.Id);
                     _logger.LogWarning($"Бронирование {booking.Id} отклонено");
                 }
                 finally

@@ -7,7 +7,7 @@ namespace EventManagerSystem.Services.BookingService
 {
     public class BookingService : IBookingService
     {
-        private readonly List<BookingModel> _bookings = new();
+        public readonly List<BookingModel> _bookings = new();
         private IEventService eventService;
         private readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
 
@@ -78,17 +78,17 @@ namespace EventManagerSystem.Services.BookingService
             }
         }
 
-        public async Task UpdateBookingAsync(BookingModel bookingForUpdating)
+        public async Task UpdateBookingAsync(Guid bookingForUpdating)
         {
             await _bookingLock.WaitAsync(new CancellationToken());
 
             try
             {
 
-                var booking = _bookings.FirstOrDefault(x => x.Id == bookingForUpdating.Id);     
+                var booking = _bookings.FirstOrDefault(x => x.Id == bookingForUpdating);     
                 if (booking is null)
                 {
-                    throw new NotFoundException($"Booking with id {bookingForUpdating.Id} not found");
+                    throw new NotFoundException($"Booking with id {bookingForUpdating} not found");
                 }
                 booking.Status = BookingStatus.Confirmed;
                 booking.ProcessedAt = DateTime.UtcNow;
@@ -99,12 +99,13 @@ namespace EventManagerSystem.Services.BookingService
             }
         }
 
-        public async Task RejectBookingAsync(BookingModel bookingForRejecting)
+        public async Task RejectBookingAsync(Guid bookingForRejecting)
         {
+            var booking = _bookings.FirstOrDefault(x => x.Id == bookingForRejecting);
             EventModel _event = null;
             try
             {
-                _event = await eventService.GetEventAsync(bookingForRejecting.EventId);          
+                _event = await eventService.GetEventAsync(booking.EventId);          
             }
             catch (NotFoundException ex)
             {
@@ -116,8 +117,9 @@ namespace EventManagerSystem.Services.BookingService
                 {
                     eventService.ReleaseSeats(_event.Id);
                 }
-                bookingForRejecting.Status = BookingStatus.Rejected;
-                bookingForRejecting.ProcessedAt = DateTime.UtcNow;
+                
+                booking.Status = BookingStatus.Rejected;
+                booking.ProcessedAt = DateTime.UtcNow;
             }
         }
 

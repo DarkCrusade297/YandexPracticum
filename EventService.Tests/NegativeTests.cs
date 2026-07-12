@@ -50,7 +50,8 @@ namespace EventService.Tests
                 Title = "Test Event",
                 Description = "Description",
                 StartAt = DateTime.UtcNow.AddDays(5),
-                EndAt = DateTime.UtcNow.AddDays(1)
+                EndAt = DateTime.UtcNow.AddDays(1),
+                TotalSeats = 1
             };
 
             // Act & Assert
@@ -66,7 +67,8 @@ namespace EventService.Tests
                 Title = "",
                 Description = "Description",
                 StartAt = DateTime.UtcNow.AddDays(1),
-                EndAt = DateTime.UtcNow.AddDays(2)
+                EndAt = DateTime.UtcNow.AddDays(2),
+                TotalSeats = 1
             };
 
             // Act & Assert
@@ -82,7 +84,8 @@ namespace EventService.Tests
                 Title = "Test Event",
                 Description = "Description",
                 StartAt = DateTime.UtcNow.AddDays(1),
-                EndAt = DateTime.UtcNow.AddDays(2)
+                EndAt = DateTime.UtcNow.AddDays(2),
+                TotalSeats = 1
             };
             var createdEvent =  await _sut.CreateEventAsync(_event);
 
