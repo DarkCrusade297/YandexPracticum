@@ -1,4 +1,5 @@
 ﻿using EventManagerSystem.DTO.Bookings;
+using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
@@ -28,6 +29,8 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPost("/events/{id}/book")]
+        [ProducesResponseType(typeof(CreatedBookingDto), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(NoAvailableSeatsException), StatusCodes.Status409Conflict)]
         public async Task<ActionResult<CreatedBookingDto?>> CreateBookingByEventId(Guid id)
         {
             var bk = await _bookingService.CreateBookingAsync(id);

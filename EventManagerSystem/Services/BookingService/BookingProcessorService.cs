@@ -49,7 +49,7 @@ namespace EventManagerSystem.Services.BookingService
                 await _processingSemaphore.WaitAsync(new CancellationToken());
                 try
                 {
-                    var _event = _eventService.GetEventAsync(booking.EventId);
+                    var _event = await _eventService.GetEventAsync(booking.EventId);
 
                     await _bookingService.UpdateBookingAsync(booking.Id);
 
