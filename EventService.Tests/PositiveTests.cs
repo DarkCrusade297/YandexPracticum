@@ -16,7 +16,8 @@ public class PositiveTests
             Title = "Test Event",
             Description = "Test Description",
             StartAt = DateTime.UtcNow.AddDays(1).Date,
-            EndAt = DateTime.UtcNow.AddDays(2).Date
+            EndAt = DateTime.UtcNow.AddDays(2).Date,
+            TotalSeats = 10
         };
 
         // Act
@@ -28,6 +29,7 @@ public class PositiveTests
         Assert.Equal(dto.Description, result.Description);
         Assert.Equal(dto.StartAt, result.StartAt);
         Assert.Equal(dto.EndAt, result.EndAt);
+        Assert.Equal(dto.TotalSeats, result.TotalSeats);
         Assert.Contains(result, _sut.Events);
     }
 
@@ -37,9 +39,9 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Event 2", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Event 3", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
+        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Event 2", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 50),
+        new EventModel("Event 3", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 100),
     });
 
         // Act
@@ -60,7 +62,8 @@ public class PositiveTests
             Title = "Test Event",
             Description = "Test Description",
             StartAt = DateTime.UtcNow.AddDays(1).Date,
-            EndAt = DateTime.UtcNow.AddDays(2).Date
+            EndAt = DateTime.UtcNow.AddDays(2).Date,
+            TotalSeats = 10
         };
         var createdEvent = await _sut.CreateEventAsync(dto);
 
@@ -74,6 +77,7 @@ public class PositiveTests
         Assert.Equal(_event.Description, createdEvent.Description);
         Assert.Equal(_event.StartAt, createdEvent.StartAt);
         Assert.Equal(_event.EndAt, createdEvent.EndAt);
+        Assert.Equal(_event.TotalSeats, createdEvent.TotalSeats);
     }
 
     [Fact]
@@ -85,7 +89,8 @@ public class PositiveTests
             Title = "Test Event",
             Description = "Test Description",
             StartAt = DateTime.UtcNow.AddDays(1).Date,
-            EndAt = DateTime.UtcNow.AddDays(2).Date
+            EndAt = DateTime.UtcNow.AddDays(2).Date,
+            TotalSeats = 10
         };
         var createdEvent = await _sut.CreateEventAsync(dto);
 
@@ -117,7 +122,8 @@ public class PositiveTests
             Title = "Test Event",
             Description = "Test Description",
             StartAt = DateTime.UtcNow.AddDays(1).Date,
-            EndAt = DateTime.UtcNow.AddDays(2).Date
+            EndAt = DateTime.UtcNow.AddDays(2).Date,
+            TotalSeats = 10
         };
         var createdEvent = await _sut.CreateEventAsync(dto);
 
@@ -135,9 +141,9 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Test", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Test 2", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
+        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Test", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 20),
+        new EventModel("Test 2", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 30),
         });
 
         // Act
@@ -155,14 +161,14 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date),
+        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
         });
 
         // Act
@@ -180,14 +186,14 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date),
+        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
         });
 
         // Act
@@ -205,14 +211,14 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date),
+        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
         });
 
         // Act
@@ -230,14 +236,14 @@ public class PositiveTests
         // Arrange
         _sut.Events.AddRange(new[]
         {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date),
-        new EventModel("Event 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date),
-        new EventModel("Event 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date),
-        new EventModel("Event 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date),
-        new EventModel("Event 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date),
+        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+        new EventModel("Event 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+        new EventModel("Event 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+        new EventModel("Event 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+        new EventModel("Event 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
         });
 
         // Act

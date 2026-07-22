@@ -28,7 +28,7 @@ namespace BookingServices.Tests
 
             //Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() => _bookingService.CreateBookingAsync(nonExistingEventId));
-            Assert.Empty(_bookingService.Bookings);
+            Assert.Empty(_bookingService._bookings);
         }
 
         [Fact]
@@ -39,7 +39,7 @@ namespace BookingServices.Tests
 
             //Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() => _bookingService.GetBookingByIdAsync(nonExistingBookingId));
-            Assert.Empty(_bookingService.Bookings);
+            Assert.Empty(_bookingService._bookings);
         }
 
         [Fact]
@@ -51,7 +51,8 @@ namespace BookingServices.Tests
                 Title = "Title",
                 Description = "Description",
                 StartAt = DateTime.UtcNow.AddDays(30),
-                EndAt = DateTime.UtcNow.AddDays(31)
+                EndAt = DateTime.UtcNow.AddDays(31),
+                TotalSeats = 10,
             };
 
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);

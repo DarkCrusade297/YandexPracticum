@@ -20,7 +20,8 @@ namespace EventManagerSystem.Services.EventService
             var eventModel = new EventModel(eventDto.Title,
                 eventDto.Description,
                 eventDto.StartAt,
-                eventDto.EndAt);
+                eventDto.EndAt,
+                eventDto.TotalSeats);
 
             Events.Add(eventModel);
             return Task.FromResult(eventModel);
@@ -71,6 +72,28 @@ namespace EventManagerSystem.Services.EventService
             return Task.FromResult(ev);
         }
 
+        public bool ReleaseSeats(Guid id, int count = 1)
+        {
+            var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
+            if (ev == null)
+                return false;
+            if (ev.AvailableSeats == ev.TotalSeats)
+                return false;
+            ev.AvailableSeats += count;
+            return true;
+        }
+
+        public bool TryReserveSeats(Guid id, int count = 1)
+        {
+            var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
+            if (ev == null)
+                return false;
+            if (ev.AvailableSeats < 1)
+                return false;
+            ev.AvailableSeats -= count;
+            return true;
+        }
+
         public Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
         {
             var model = Events.FirstOrDefault(e => e.Id == id);
@@ -94,5 +117,7 @@ namespace EventManagerSystem.Services.EventService
 
             return Task.FromResult(model);
         }
+
+
     }
 }
