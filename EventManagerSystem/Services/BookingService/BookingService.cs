@@ -1,19 +1,22 @@
-﻿using EventManagerSystem.DTO.Bookings;
+﻿using EventManagerSystem.DataAccess;
+using EventManagerSystem.DTO.Bookings;
 using EventManagerSystem.Enums;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventManagerSystem.Services.BookingService
 {
-    public class BookingService : IBookingService
+    internal class BookingService : IBookingService
     {
-        public readonly List<BookingModel> _bookings = new();
+        private AppDbContext _context { get; set; }
         private IEventService eventService;
         private readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
 
-        public BookingService(IEventService eventService)
+        public BookingService(IEventService eventService, AppDbContext context)
         {
             this.eventService = eventService;
+            _context = context;
         }
 
         public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
@@ -26,7 +29,8 @@ namespace EventManagerSystem.Services.BookingService
                 if (!tryReserve)
                     throw new NoAvailableSeatsException("No available seats for this event");
                 var bk = new BookingModel(eventId, null);
-                _bookings.Add(bk);
+                _context.Bookings.Add(bk);
+                await _context.SaveChangesAsync();
                 var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status };
                 return cbkdto;
             }
@@ -42,7 +46,7 @@ namespace EventManagerSystem.Services.BookingService
 
             try
             {
-                var booking = _bookings.FirstOrDefault(e => e.Id == bookingId);
+                var booking = await _context.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
 
                 if (booking is null)
                 {
@@ -68,7 +72,7 @@ namespace EventManagerSystem.Services.BookingService
 
             try
             {
-                return _bookings
+                return _context.Bookings
                     .Where(b => b.Status == BookingStatus.Pending)
                     .ToList();
             }
@@ -85,13 +89,14 @@ namespace EventManagerSystem.Services.BookingService
             try
             {
 
-                var booking = _bookings.FirstOrDefault(x => x.Id == bookingForUpdating);     
+                var booking = await _context.Bookings.FirstOrDefaultAsync(x => x.Id == bookingForUpdating);     
                 if (booking is null)
                 {
                     throw new NotFoundException($"Booking with id {bookingForUpdating} not found");
                 }
                 booking.Status = BookingStatus.Confirmed;
                 booking.ProcessedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
             finally
             {
@@ -101,7 +106,7 @@ namespace EventManagerSystem.Services.BookingService
 
         public async Task RejectBookingAsync(Guid bookingForRejecting)
         {
-            var booking = _bookings.FirstOrDefault(x => x.Id == bookingForRejecting);
+            var booking = await _context.Bookings.FirstOrDefaultAsync(x => x.Id == bookingForRejecting);
             EventModel _event = null;
             try
             {
@@ -120,9 +125,8 @@ namespace EventManagerSystem.Services.BookingService
                 
                 booking.Status = BookingStatus.Rejected;
                 booking.ProcessedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
         }
-
-
     }
 }

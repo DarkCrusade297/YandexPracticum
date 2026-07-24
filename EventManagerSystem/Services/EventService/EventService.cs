@@ -1,14 +1,20 @@
-﻿using EventManagerSystem.DTO.Events;
+﻿using EventManagerSystem.DataAccess;
+using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Services.EventService
 {
-    public class EventService : IEventService
+    internal class EventService : IEventService
     {
-        public List<EventModel> Events { get; set; } = new List<EventModel>();
-        public Task<EventModel> CreateEventAsync(CreateEventDto eventDto)
+        private AppDbContext _context { get; set; }
+        public EventService(AppDbContext context)
+        {
+            _context = context;
+        }
+        public async Task<EventModel> CreateEventAsync(CreateEventDto eventDto)
         {
             var context = new ValidationContext(eventDto);
             var results = new List<ValidationResult>();
@@ -22,24 +28,23 @@ namespace EventManagerSystem.Services.EventService
                 eventDto.StartAt,
                 eventDto.EndAt,
                 eventDto.TotalSeats);
-
-            Events.Add(eventModel);
-            return Task.FromResult(eventModel);
+            _context.Events.Add(eventModel);
+            await _context.SaveChangesAsync();
+            return eventModel;
         }
 
-        public Task DeleteEventAsync(Guid id)
+        public async Task DeleteEventAsync(Guid id)
         {
-            var ev = Events.FirstOrDefault(e => e.Id == id);
+            var ev = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
             if (ev is null)
                 throw new NotFoundException($"Event with id '{id}' not found");
-
-            Events.Remove(ev);
-            return Task.CompletedTask;
+            _context.Events.Remove(ev);
+            await _context.SaveChangesAsync();
         }
 
-        public Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
+        public async Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
         {
-            var ens = Events.AsQueryable();
+            var ens = _context.Events.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(title))
                ens = ens.Where(e => e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
@@ -61,42 +66,44 @@ namespace EventManagerSystem.Services.EventService
             ens = ens.Skip(((int)page - 1) * (int)pageSize)
                 .Take((int)pageSize);
 
-            return Task.FromResult(new PaginatedResultDto { total = ensCount, events = ens.ToList(), pageSize = (int)pageSize, currentPage = (int)page });
+            return new PaginatedResultDto { total = ensCount, events = ens.ToList(), pageSize = (int)pageSize, currentPage = (int)page };
         }
 
-        public Task<EventModel> GetEventAsync(Guid id)
+        public async Task<EventModel> GetEventAsync(Guid id)
         {
-            var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
+            var ev = await _context.Events.FirstOrDefaultAsync(e => e.Id.Equals(id));
             if (ev == null)
                 throw new NotFoundException($"Event with id {id} not found");
-            return Task.FromResult(ev);
+            return ev;
         }
 
         public bool ReleaseSeats(Guid id, int count = 1)
         {
-            var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
+            var ev = _context.Events.FirstOrDefault(e => e.Id.Equals(id));
             if (ev == null)
                 return false;
             if (ev.AvailableSeats == ev.TotalSeats)
                 return false;
             ev.AvailableSeats += count;
+            _context.SaveChangesAsync();
             return true;
         }
 
         public bool TryReserveSeats(Guid id, int count = 1)
         {
-            var ev = Events.FirstOrDefault(e => e.Id.Equals(id));
+            var ev = _context.Events.FirstOrDefault(e => e.Id.Equals(id));
             if (ev == null)
                 return false;
             if (ev.AvailableSeats < 1)
                 return false;
             ev.AvailableSeats -= count;
+            _context.SaveChangesAsync();
             return true;
         }
 
-        public Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
+        public async Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
         {
-            var model = Events.FirstOrDefault(e => e.Id == id);
+            var model = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
             if (model is null)
                 throw new NotFoundException($"Event with id '{id}' not found");
 
@@ -114,8 +121,8 @@ namespace EventManagerSystem.Services.EventService
             model.Description = eventDto.Description;
             model.StartAt = eventDto.StartAt;
             model.EndAt = eventDto.EndAt;
-
-            return Task.FromResult(model);
+            await _context.SaveChangesAsync();
+            return model;
         }
 
 
