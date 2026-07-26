@@ -11,7 +11,7 @@ namespace EventManagerSystem.Services.BookingService
     {
         private AppDbContext _context { get; set; }
         private IEventService eventService;
-        private readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
 
         public BookingService(IEventService eventService, AppDbContext context)
         {
@@ -20,12 +20,12 @@ namespace EventManagerSystem.Services.BookingService
         }
 
         public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
-        {
-            await eventService.GetEventAsync(eventId);
+        {   
             await _bookingLock.WaitAsync(new CancellationToken());
             try
             {
-                var tryReserve = eventService.TryReserveSeats(eventId);
+                await eventService.GetEventAsync(eventId);
+                var tryReserve = await eventService.TryReserveSeats(eventId);
                 if (!tryReserve)
                     throw new NoAvailableSeatsException("No available seats for this event");
                 var bk = new BookingModel(eventId, null);

@@ -77,27 +77,27 @@ namespace EventManagerSystem.Services.EventService
             return ev;
         }
 
-        public bool ReleaseSeats(Guid id, int count = 1)
+        public async Task<bool> ReleaseSeats(Guid id, int count = 1)
         {
-            var ev = _context.Events.FirstOrDefault(e => e.Id.Equals(id));
+            var ev = await _context.Events.FirstOrDefaultAsync(e => e.Id.Equals(id));
             if (ev == null)
                 return false;
             if (ev.AvailableSeats == ev.TotalSeats)
                 return false;
             ev.AvailableSeats += count;
-            _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
 
-        public bool TryReserveSeats(Guid id, int count = 1)
+        public async Task<bool> TryReserveSeats(Guid id, int count = 1)
         {
-            var ev = _context.Events.FirstOrDefault(e => e.Id.Equals(id));
+            var ev = await _context.Events.FirstOrDefaultAsync(e => e.Id.Equals(id));
             if (ev == null)
                 return false;
             if (ev.AvailableSeats < 1)
                 return false;
             ev.AvailableSeats -= count;
-            _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
 
