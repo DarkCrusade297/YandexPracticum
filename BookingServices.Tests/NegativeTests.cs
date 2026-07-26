@@ -1,23 +1,42 @@
-﻿using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Enums;
+﻿using EventManagerSystem.DataAccess;
+using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
-using EventManagerSystem.Models;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
-using Moq;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BookingServices.Tests
 {
-    public class NegativeTests
+    public class NegativeTests : IDisposable
     {
-        private readonly EventService _eventService;
-        private readonly BookingService _bookingService;
+        private readonly ServiceProvider _serviceProvider;
+        private readonly IServiceScope _scope;
+
+        private readonly IEventService _eventService;
+        private readonly IBookingService _bookingService;
+        private readonly AppDbContext _context;
 
         public NegativeTests()
         {
-            _eventService = new EventService();
-            _bookingService = new BookingService(_eventService);
+            var dbName = Guid.NewGuid().ToString();
+
+            var services = new ServiceCollection();
+
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseInMemoryDatabase(dbName));
+
+            services.AddScoped<IEventService, EventService>();
+            services.AddScoped<IBookingService, BookingService>();
+
+            _serviceProvider = services.BuildServiceProvider();
+
+            _scope = _serviceProvider.CreateScope();
+
+            _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
+            _bookingService = _scope.ServiceProvider.GetRequiredService<IBookingService>();
+            _context = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         }
 
         [Fact]
@@ -26,9 +45,11 @@ namespace BookingServices.Tests
             // Arrange
             var nonExistingEventId = Guid.NewGuid();
 
-            //Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => _bookingService.CreateBookingAsync(nonExistingEventId));
-            Assert.Empty(_bookingService._bookings);
+            // Act & Assert
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                _bookingService.CreateBookingAsync(nonExistingEventId));
+
+            Assert.Empty(await _context.Bookings.ToListAsync());
         }
 
         [Fact]
@@ -37,22 +58,24 @@ namespace BookingServices.Tests
             // Arrange
             var nonExistingBookingId = Guid.NewGuid();
 
-            //Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => _bookingService.GetBookingByIdAsync(nonExistingBookingId));
-            Assert.Empty(_bookingService._bookings);
+            // Act & Assert
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                _bookingService.GetBookingByIdAsync(nonExistingBookingId));
+
+            Assert.Empty(await _context.Bookings.ToListAsync());
         }
 
         [Fact]
         public async Task CreateBookingAsync_CreateBookingAfterEventWasDeleted_ReturnsNotFoundException()
         {
-            // Arrange - создаём событие
+            // Arrange
             var createEventDto = new CreateEventDto
             {
                 Title = "Title",
                 Description = "Description",
                 StartAt = DateTime.UtcNow.AddDays(30),
                 EndAt = DateTime.UtcNow.AddDays(31),
-                TotalSeats = 10,
+                TotalSeats = 10
             };
 
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
@@ -61,10 +84,23 @@ namespace BookingServices.Tests
             Assert.NotNull(createdEvent);
             Assert.Equal("Title", createdEvent.Title);
 
-            // Act & Assert
+            // Act
             await _eventService.DeleteEventAsync(eventId);
-            await Assert.ThrowsAsync<NotFoundException>(() => _eventService.GetEventAsync(eventId));
-            await Assert.ThrowsAsync<NotFoundException>(() => _bookingService.CreateBookingAsync(eventId));
+
+            // Assert
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                _eventService.GetEventAsync(eventId));
+
+            await Assert.ThrowsAsync<NotFoundException>(() =>
+                _bookingService.CreateBookingAsync(eventId));
+
+            Assert.Empty(await _context.Bookings.ToListAsync());
+        }
+
+        public void Dispose()
+        {
+            _scope.Dispose();
+            _serviceProvider.Dispose();
         }
     }
 }

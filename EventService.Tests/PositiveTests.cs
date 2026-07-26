@@ -1,11 +1,39 @@
-﻿using EventManagerSystem.DTO.Events;
+﻿using EventManagerSystem.DataAccess;
+using EventManagerSystem.DTO.Events;
+using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
+using EventManagerSystem.Services;
+using EventManagerSystem.Services.EventService;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EventService.Tests;
 
-public class PositiveTests
+public class PositiveTests : IDisposable
 {
-    private readonly EventManagerSystem.Services.EventService.EventService _sut = new EventManagerSystem.Services.EventService.EventService();
+    private readonly ServiceProvider _serviceProvider;
+    private readonly IServiceScope _scope;
+    private readonly IEventService _eventService;
+    private readonly AppDbContext _context;
+
+    public PositiveTests()
+    {
+        var dbName = Guid.NewGuid().ToString();
+
+        var services = new ServiceCollection();
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase(dbName));
+
+        services.AddScoped<IEventService, EventManagerSystem.Services.EventService.EventService>();
+
+        _serviceProvider = services.BuildServiceProvider();
+
+        _scope = _serviceProvider.CreateScope();
+
+        _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
+        _context = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    }
 
     [Fact]
     public async Task CreateEventAsync_ValidDto_ReturnsCreatedEvent()
@@ -21,7 +49,10 @@ public class PositiveTests
         };
 
         // Act
-        var result = await _sut.CreateEventAsync(dto);
+        var result = await _eventService.CreateEventAsync(dto);
+
+        var eventFromDb = await _context.Events
+            .FirstOrDefaultAsync(e => e.Id == result.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -30,22 +61,23 @@ public class PositiveTests
         Assert.Equal(dto.StartAt, result.StartAt);
         Assert.Equal(dto.EndAt, result.EndAt);
         Assert.Equal(dto.TotalSeats, result.TotalSeats);
-        Assert.Contains(result, _sut.Events);
+
+        Assert.NotNull(eventFromDb);
+        Assert.Equal(result.Id, eventFromDb.Id);
     }
 
     [Fact]
     public async Task GetAllEventsAsync_ReturnsAllEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Event 2", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 50),
-        new EventModel("Event 3", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 100),
-    });
+        await SeedEventsAsync(
+            new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Event 2", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 50),
+            new EventModel("Event 3", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 100)
+        );
 
         // Act
-        var result = await _sut.GetAllEventsAsync(null, null, null, null, null);
+        var result = await _eventService.GetAllEventsAsync(null, null, null, null, null);
 
         // Assert
         Assert.NotNull(result);
@@ -65,19 +97,20 @@ public class PositiveTests
             EndAt = DateTime.UtcNow.AddDays(2).Date,
             TotalSeats = 10
         };
-        var createdEvent = await _sut.CreateEventAsync(dto);
+
+        var createdEvent = await _eventService.CreateEventAsync(dto);
 
         // Act
-        var _event = await _sut.GetEventAsync(createdEvent.Id);
+        var eventDto = await _eventService.GetEventAsync(createdEvent.Id);
 
         // Assert
-        Assert.NotNull(_event);
-        Assert.Equal(_event.Id, createdEvent.Id);
-        Assert.Equal(_event.Title, createdEvent.Title);
-        Assert.Equal(_event.Description, createdEvent.Description);
-        Assert.Equal(_event.StartAt, createdEvent.StartAt);
-        Assert.Equal(_event.EndAt, createdEvent.EndAt);
-        Assert.Equal(_event.TotalSeats, createdEvent.TotalSeats);
+        Assert.NotNull(eventDto);
+        Assert.Equal(createdEvent.Id, eventDto.Id);
+        Assert.Equal(createdEvent.Title, eventDto.Title);
+        Assert.Equal(createdEvent.Description, eventDto.Description);
+        Assert.Equal(createdEvent.StartAt, eventDto.StartAt);
+        Assert.Equal(createdEvent.EndAt, eventDto.EndAt);
+        Assert.Equal(createdEvent.TotalSeats, eventDto.TotalSeats);
     }
 
     [Fact]
@@ -92,25 +125,30 @@ public class PositiveTests
             EndAt = DateTime.UtcNow.AddDays(2).Date,
             TotalSeats = 10
         };
-        var createdEvent = await _sut.CreateEventAsync(dto);
+
+        var createdEvent = await _eventService.CreateEventAsync(dto);
+
+        var expectedStartAt = DateTime.UtcNow.AddDays(3).Date;
+        var expectedEndAt = DateTime.UtcNow.AddDays(4).Date;
 
         // Act
-        await _sut.UpdateEventAsync(createdEvent.Id, new UpdateEventDto
+        await _eventService.UpdateEventAsync(createdEvent.Id, new UpdateEventDto
         {
             Title = "UpdatedTitle",
             Description = "UpdatedDescription",
-            StartAt = DateTime.UtcNow.AddDays(3).Date,
-            EndAt = DateTime.UtcNow.AddDays(4).Date
+            StartAt = expectedStartAt,
+            EndAt = expectedEndAt
         });
-        var updatedEvent = await _sut.GetEventAsync(createdEvent.Id);
+
+        var updatedEvent = await _eventService.GetEventAsync(createdEvent.Id);
 
         // Assert
         Assert.NotNull(updatedEvent);
-        Assert.Equal(updatedEvent.Id, createdEvent.Id);
+        Assert.Equal(createdEvent.Id, updatedEvent.Id);
         Assert.Equal("UpdatedTitle", updatedEvent.Title);
         Assert.Equal("UpdatedDescription", updatedEvent.Description);
-        Assert.Equal(updatedEvent.StartAt, DateTime.UtcNow.AddDays(3).Date);
-        Assert.Equal(updatedEvent.EndAt, DateTime.UtcNow.AddDays(4).Date);
+        Assert.Equal(expectedStartAt, updatedEvent.StartAt);
+        Assert.Equal(expectedEndAt, updatedEvent.EndAt);
     }
 
     [Fact]
@@ -125,29 +163,33 @@ public class PositiveTests
             EndAt = DateTime.UtcNow.AddDays(2).Date,
             TotalSeats = 10
         };
-        var createdEvent = await _sut.CreateEventAsync(dto);
+
+        var createdEvent = await _eventService.CreateEventAsync(dto);
 
         // Act
-        await _sut.DeleteEventAsync(createdEvent.Id);
+        await _eventService.DeleteEventAsync(createdEvent.Id);
+
+        var eventsCount = await _context.Events.CountAsync();
 
         // Assert
-        Assert.Empty(_sut.Events);
-        Assert.DoesNotContain(createdEvent, _sut.Events);
+        Assert.Equal(0, eventsCount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            _eventService.GetEventAsync(createdEvent.Id));
     }
 
     [Fact]
     public async Task GetAllEventsAsync_ReturnsFilteredByTitleEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Test", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 20),
-        new EventModel("Test 2", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 30),
-        });
+        await SeedEventsAsync(
+            new EventModel("Event 1", "Description 1", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Test", "Description 2", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 20),
+            new EventModel("Test 2", "Description 3", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 30)
+        );
 
         // Act
-        var result = await _sut.GetAllEventsAsync("EV", null, null, null, null);
+        var result = await _eventService.GetAllEventsAsync("EV", null, null, null, null);
 
         // Assert
         Assert.NotNull(result);
@@ -159,20 +201,21 @@ public class PositiveTests
     public async Task GetAllEventsAsync_ReturnsFilteredByStartAtEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
-        });
+        await SeedEventsAsync(
+            new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+            new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+            new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+            new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+            new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+            new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+            new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10)
+        );
+
+        var startAtFilter = DateTime.UtcNow.AddDays(5).Date;
 
         // Act
-        var result = await _sut.GetAllEventsAsync(null, DateTime.UtcNow.AddDays(5).Date, null, null, null);
+        var result = await _eventService.GetAllEventsAsync(null, startAtFilter, null, null, null);
 
         // Assert
         Assert.NotNull(result);
@@ -184,20 +227,21 @@ public class PositiveTests
     public async Task GetAllEventsAsync_ReturnsFilteredByEndAtEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
-        });
+        await SeedEventsAsync(
+            new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+            new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+            new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+            new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+            new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+            new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+            new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10)
+        );
+
+        var endAtFilter = DateTime.UtcNow.AddDays(6).Date;
 
         // Act
-        var result = await _sut.GetAllEventsAsync(null, null, DateTime.UtcNow.AddDays(6).Date, null, null);
+        var result = await _eventService.GetAllEventsAsync(null, null, endAtFilter, null, null);
 
         // Assert
         Assert.NotNull(result);
@@ -209,20 +253,10 @@ public class PositiveTests
     public async Task GetAllEventsAsync_ReturnsFilteredByPaginationEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
-        new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
-        new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
-        new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
-        new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
-        });
+        await SeedEightEventsAsync();
 
         // Act
-        var result = await _sut.GetAllEventsAsync(null, null, null, 2, 3);
+        var result = await _eventService.GetAllEventsAsync(null, null, null, 2, 3);
 
         // Assert
         Assert.NotNull(result);
@@ -234,24 +268,52 @@ public class PositiveTests
     public async Task GetAllEventsAsync_ReturnsByCombinatedFilteredEvents()
     {
         // Arrange
-        _sut.Events.AddRange(new[]
-        {
-        new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
-        new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
-        new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
-        new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
-        new EventModel("Event 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
-        new EventModel("Event 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
-        new EventModel("Event 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
-        new EventModel("Event 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10),
-        });
+        await SeedEventsAsync(
+            new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+            new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+            new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+            new EventModel("Event 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+            new EventModel("Event 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+            new EventModel("Event 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+            new EventModel("Event 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10)
+        );
+
+        var startAtFilter = DateTime.UtcNow.AddDays(5).Date;
+        var endAtFilter = DateTime.UtcNow.AddDays(8).Date;
 
         // Act
-        var result = await _sut.GetAllEventsAsync("ES", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(8).Date, 1, 1);
+        var result = await _eventService.GetAllEventsAsync("ES", startAtFilter, endAtFilter, 1, 1);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.total);
         Assert.Equal(1, result.events.Count);
+    }
+
+    private async Task SeedEventsAsync(params EventModel[] events)
+    {
+        _context.Events.AddRange(events);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedEightEventsAsync()
+    {
+        await SeedEventsAsync(
+            new EventModel("Test 0", "Description 0", DateTime.UtcNow.AddDays(1).Date, DateTime.UtcNow.AddDays(2).Date, 10),
+            new EventModel("Test 1", "Description 1", DateTime.UtcNow.AddDays(3).Date, DateTime.UtcNow.AddDays(4).Date, 10),
+            new EventModel("Test 2", "Description 2", DateTime.UtcNow.AddDays(5).Date, DateTime.UtcNow.AddDays(6).Date, 10),
+            new EventModel("Test 3", "Description 3", DateTime.UtcNow.AddDays(7).Date, DateTime.UtcNow.AddDays(8).Date, 10),
+            new EventModel("Test 4", "Description 4", DateTime.UtcNow.AddDays(9).Date, DateTime.UtcNow.AddDays(10).Date, 10),
+            new EventModel("Test 5", "Description 5", DateTime.UtcNow.AddDays(11).Date, DateTime.UtcNow.AddDays(12).Date, 10),
+            new EventModel("Test 6", "Description 6", DateTime.UtcNow.AddDays(13).Date, DateTime.UtcNow.AddDays(14).Date, 10),
+            new EventModel("Test 7", "Description 7", DateTime.UtcNow.AddDays(15).Date, DateTime.UtcNow.AddDays(16).Date, 10)
+        );
+    }
+
+    public void Dispose()
+    {
+        _scope.Dispose();
+        _serviceProvider.Dispose();
     }
 }
