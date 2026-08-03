@@ -4,9 +4,10 @@ namespace EventManagerSystem.Repositories.Booking
 {
     public interface IBookingRepository
     {
-        Task<BookingModel> GetBookingByIdAsync(Guid bookingId);
+        Task<BookingModel?> GetBookingByIdAsync(Guid bookingId);
         Task<BookingModel> CreateBookingAsync(BookingModel booking);
         Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
+        Task<List<Guid>> GetPendingBookingsIdsAsync();
         Task SaveChangesAsync();
     }
 }

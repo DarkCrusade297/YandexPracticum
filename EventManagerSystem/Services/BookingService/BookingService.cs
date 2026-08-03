@@ -19,6 +19,23 @@ namespace EventManagerSystem.Services.BookingService
             _bookingRepository = bookingRepository;
         }
 
+        public async Task<BookingModel> GetBookingModelByIdAsync(Guid id)
+        {
+            await _bookingLock.WaitAsync(new CancellationToken());
+            try
+            {
+                var booking = await _bookingRepository.GetBookingByIdAsync(id);
+                if (booking is null)
+                {
+                    throw new NotFoundException($"Booking with id {id} not found");
+                }
+                return booking;
+            }
+            finally
+            {
+                _bookingLock.Release();
+            }
+        }
         public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
         {   
             await _bookingLock.WaitAsync(new CancellationToken());
@@ -101,6 +118,10 @@ namespace EventManagerSystem.Services.BookingService
         public async Task RejectBookingAsync(Guid bookingForRejecting)
         {
             var booking = await _bookingRepository.GetBookingByIdAsync(bookingForRejecting);
+            if (booking is null)
+            {
+                throw new NotFoundException($"Booking with id {bookingForRejecting} not found");
+            }
             EventModel? _event = null;
             try
             {

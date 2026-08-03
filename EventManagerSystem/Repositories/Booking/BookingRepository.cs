@@ -1,4 +1,5 @@
 ﻿using EventManagerSystem.DataAccess;
+using EventManagerSystem.Enums;
 using EventManagerSystem.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,7 @@ namespace EventManagerSystem.Repositories.Booking
         {
             _db = db;
         }
-        public async Task<BookingModel> GetBookingByIdAsync(Guid bookingId)
+        public async Task<BookingModel?> GetBookingByIdAsync(Guid bookingId)
         {
             return await _db.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
         }
@@ -27,6 +28,14 @@ namespace EventManagerSystem.Repositories.Booking
         public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
         {
             return _db.Bookings.Where(b => b.Status == Enums.BookingStatus.Pending).ToList();
+        }
+
+        public async Task<List<Guid>> GetPendingBookingsIdsAsync()
+        {
+            return await _db.Bookings
+                .Where(b => b.Status == BookingStatus.Pending)
+                .Select(b => b.Id)
+                .ToListAsync();
         }
 
         public async Task SaveChangesAsync()
