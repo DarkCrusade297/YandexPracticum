@@ -1,8 +1,6 @@
 ﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Bookings;
-using EventManagerSystem.Exceptions;
+using EventManagerSystem.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace EventManagerSystem.Repositories.Booking
 {
@@ -14,19 +12,26 @@ namespace EventManagerSystem.Repositories.Booking
         {
             _db = db;
         }
-        public async Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)
+        public async Task<BookingModel> GetBookingByIdAsync(Guid bookingId)
         {
-            var bk = await _db.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
-            if (bk is null)
-            {
-                throw new NotFoundException($"Booking with id {bookingId} not found");
-            }
-            return new GetBookingDto
-            {
-                Id = bk.Id,
-                Status = bk.Status,
-                ProcessedAt = bk.ProcessedAt
-            };
+            return await _db.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
+        }
+
+        public async Task<BookingModel> CreateBookingAsync(BookingModel booking)
+        {
+            _db.Bookings.Add(booking);
+            await _db.SaveChangesAsync();
+            return booking;
+        }
+
+        public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
+        {
+            return _db.Bookings.Where(b => b.Status == Enums.BookingStatus.Pending).ToList();
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _db.SaveChangesAsync();
         }
     }
 }
