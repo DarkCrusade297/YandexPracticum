@@ -27,12 +27,9 @@ namespace EventManagerSystem.Repositories.Event
             return eventModel;
         }
 
-        public async Task DeleteEventAsync(Guid id)
-        {
-            var ev = _db.Events.FirstOrDefault(e => e.Id == id);
-            if (ev is null)
-                throw new NotFoundException($"Event with id '{id}' not found");        
-            _db.Events.Remove(ev);
+        public async Task DeleteEventAsync(EventModel _event)
+        {     
+            _db.Events.Remove(_event);
             await _db.SaveChangesAsync();
         }
 
@@ -45,33 +42,12 @@ namespace EventManagerSystem.Repositories.Event
         public async Task<EventModel> GetEventByIdAsync(Guid id)
         {
             var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
-            if (ev is null)
-                throw new NotFoundException($"Event with id '{id}' not found");
             return ev;
         }
 
-        public async Task<bool> ReleaseSeats(Guid id, int count = 1)
+        public async Task SaveChangesAsync()
         {
-            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
-            if (ev == null)
-                return false;
-            if (ev.AvailableSeats == ev.TotalSeats)
-                return false;
-            ev.AvailableSeats += count;
             await _db.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> TryReserveSeats(Guid id, int count = 1)
-        {
-            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
-            if (ev == null)
-                return false;
-            if (ev.AvailableSeats < 1)
-                return false;
-            ev.AvailableSeats -= count;
-            await _db.SaveChangesAsync();
-            return true;
         }
 
         public async Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)

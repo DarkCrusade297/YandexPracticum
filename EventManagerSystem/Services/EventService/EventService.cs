@@ -29,7 +29,10 @@ namespace EventManagerSystem.Services.EventService
 
         public async Task DeleteEventAsync(Guid id)
         {
-            await _eventRepository.DeleteEventAsync(id);
+            var ev = await _eventRepository.GetEventByIdAsync(id);
+            if (ev is null)
+                throw new NotFoundException($"Event with id '{id}' not found");
+            await _eventRepository.DeleteEventAsync(ev);
         }
 
         public async Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
@@ -61,17 +64,34 @@ namespace EventManagerSystem.Services.EventService
 
         public async Task<EventModel?> GetEventAsync(Guid id)
         {
-            return await _eventRepository.GetEventByIdAsync(id);
+            var ev = await _eventRepository.GetEventByIdAsync(id);
+            if (ev is null)
+                throw new NotFoundException($"Event with id '{id}' not found");
+            return ev;
         }
 
         public async Task<bool> ReleaseSeats(Guid id, int count = 1)
         {
-            return await _eventRepository.ReleaseSeats(id, count);
+            var ev = await _eventRepository.GetEventByIdAsync(id);
+            if (ev == null)
+                return false;
+            if (ev.AvailableSeats == ev.TotalSeats)
+                return false;
+            ev.AvailableSeats += count;
+            await _eventRepository.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> TryReserveSeats(Guid id, int count = 1)
         {
-            return await _eventRepository.TryReserveSeats(id, count);
+            var ev = await _eventRepository.GetEventByIdAsync(id);
+            if (ev == null)
+                return false;
+            if (ev.AvailableSeats < 1)
+                return false;
+            ev.AvailableSeats -= count;
+            await _eventRepository.SaveChangesAsync();
+            return true;
         }
 
         public async Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
