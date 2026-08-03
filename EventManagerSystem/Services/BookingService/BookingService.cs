@@ -3,20 +3,22 @@ using EventManagerSystem.DTO.Bookings;
 using EventManagerSystem.Enums;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
+using EventManagerSystem.Repositories.Booking;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventManagerSystem.Services.BookingService
 {
     internal class BookingService : IBookingService
     {
-        private AppDbContext _context { get; set; }
+
         private IEventService eventService;
+        private IBookingRepository _bookingRepository;
         private static readonly SemaphoreSlim _bookingLock = new SemaphoreSlim(1, 1);
 
-        public BookingService(IEventService eventService, AppDbContext context)
+        public BookingService(IEventService eventService, IBookingRepository bookingRepository)
         {
             this.eventService = eventService;
-            _context = context;
+            _bookingRepository = bookingRepository;
         }
 
         public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
@@ -46,19 +48,7 @@ namespace EventManagerSystem.Services.BookingService
 
             try
             {
-                var booking = await _context.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
-
-                if (booking is null)
-                {
-                    throw new NotFoundException($"Booking with id {bookingId} not found");
-                }
-
-                return new GetBookingDto
-                {
-                    Id = booking.Id,
-                    Status = booking.Status,
-                    ProcessedAt = booking.ProcessedAt
-                };
+               return await _bookingRepository.GetBookingByIdAsync(bookingId);
             }
             finally
             {
