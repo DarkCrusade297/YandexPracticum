@@ -3,7 +3,7 @@ using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
 using EventManagerSystem.Services;
-using EventManagerSystem.Services.EventService;
+using EventManagerSystem.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +25,7 @@ public class PositiveTests : IDisposable
         services.AddDbContext<AppDbContext>(options =>
             options.UseInMemoryDatabase(dbName));
 
+        services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IEventService, EventManagerSystem.Services.EventService.EventService>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -288,7 +289,7 @@ public class PositiveTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.total);
-        Assert.Equal(1, result.events.Count);
+        Assert.Single(result.events);
     }
 
     private async Task SeedEventsAsync(params EventModel[] events)

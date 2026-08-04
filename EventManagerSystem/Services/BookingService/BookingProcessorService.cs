@@ -1,6 +1,7 @@
 ﻿using EventManagerSystem.DataAccess;
 using EventManagerSystem.Enums;
 using EventManagerSystem.Exceptions;
+using EventManagerSystem.Repositories.Booking;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventManagerSystem.Services.BookingService
@@ -39,12 +40,8 @@ namespace EventManagerSystem.Services.BookingService
         private async Task<List<Guid>> GetPendingBookingIdsAsync(CancellationToken cancellationToken)
         {
             using var scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            return await dbContext.Bookings
-                .Where(b => b.Status == BookingStatus.Pending)
-                .Select(b => b.Id)
-                .ToListAsync(cancellationToken);
+            var bookingService = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+            return await bookingService.GetPendingBookingsIdsAsync();
         }
 
         private async Task ProcessPendingBookingsAsync(CancellationToken cancellationToken)
@@ -67,7 +64,6 @@ namespace EventManagerSystem.Services.BookingService
         {
             using var scope = _scopeFactory.CreateScope();
 
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
             var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
 
@@ -77,8 +73,7 @@ namespace EventManagerSystem.Services.BookingService
 
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
 
-                var booking = await dbContext.Bookings
-                    .FirstOrDefaultAsync(b => b.Id == bookingId, stoppingToken);
+                var booking = await bookingService.GetBookingModelByIdAsync(bookingId);
 
                 if (booking is null)
                 {

@@ -1,6 +1,8 @@
 ﻿using EventManagerSystem.DataAccess;
 using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
+using EventManagerSystem.Repositories.Booking;
+using EventManagerSystem.Repositories.Event;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
@@ -26,6 +28,9 @@ namespace BookingServices.Tests
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(dbName));
+
+            services.AddScoped<IEventRepository, EventRepository>();
+            services.AddScoped<IBookingRepository, BookingRepository>();
 
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();

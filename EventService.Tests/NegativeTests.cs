@@ -1,6 +1,7 @@
 ﻿using EventManagerSystem.DataAccess;
 using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
+using EventManagerSystem.Repositories.Event;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.EventService;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ namespace EventService.Tests
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(dbName));
 
+            services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IEventService, EventManagerSystem.Services.EventService.EventService>();
 
             _serviceProvider = services.BuildServiceProvider();
