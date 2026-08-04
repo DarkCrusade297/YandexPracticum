@@ -15,7 +15,7 @@ public sealed class PostgresTestcontainerFixture : IAsyncLifetime
     {
         await postgreSql.StartAsync();
         await using var context = CreateDbContext();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
 
     }
 
