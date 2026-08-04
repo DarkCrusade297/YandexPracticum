@@ -10,8 +10,8 @@ namespace EventManagerSystem.Services.EventService
 {
     internal class EventService : IEventService
     {
-        private EventRepository _eventRepository { get; set; }
-        public EventService(EventRepository eventRepository)
+        private IEventRepository _eventRepository { get; set; }
+        public EventService(IEventRepository eventRepository)
         {
             _eventRepository = eventRepository;
         }
@@ -40,7 +40,7 @@ namespace EventManagerSystem.Services.EventService
             var ens = _eventRepository.GetAllEventsAsync();
 
             if (!string.IsNullOrWhiteSpace(title))
-               ens = ens.Where(e => e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+               ens = ens.Where(e =>e.Title != null && e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
 
             if (from.HasValue)
                 ens = ens.Where(e => e.StartAt >= from.Value);

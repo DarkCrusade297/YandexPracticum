@@ -3,6 +3,8 @@ using EventManagerSystem.DTO.Bookings;
 using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Enums;
 using EventManagerSystem.Exceptions;
+using EventManagerSystem.Repositories.Booking;
+using EventManagerSystem.Repositories.Event;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
@@ -26,6 +28,9 @@ namespace BookingServices.Tests
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(dbName));
+
+            services.AddScoped<IEventRepository, EventRepository>();
+            services.AddScoped<IBookingRepository, BookingRepository>();
 
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
@@ -68,6 +73,7 @@ namespace BookingServices.Tests
             var eventDto = await _eventService.GetEventAsync(createdEvent.Id);
 
             // Assert
+            Assert.NotNull(eventDto);
             Assert.NotNull(booking);
             Assert.Equal(createdEvent.Id, booking.EventId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
@@ -110,6 +116,7 @@ namespace BookingServices.Tests
             var eventDto = await _eventService.GetEventAsync(createdEvent.Id);
 
             // Assert
+            Assert.NotNull(eventDto);
             Assert.NotNull(booking1);
             Assert.NotNull(booking2);
             Assert.NotNull(booking3);
@@ -190,6 +197,7 @@ namespace BookingServices.Tests
 
             // Assert
             Assert.NotNull(createdBooking);
+            Assert.NotNull(bookingCreatedDto);
             Assert.Equal(bookingCreatedDto.Id, createdBooking.Id);
             Assert.Equal(BookingStatus.Confirmed, createdBooking.Status);
             Assert.NotNull(createdBooking.ProcessedAt);
@@ -214,6 +222,8 @@ namespace BookingServices.Tests
 
             // Assert
             Assert.NotNull(rejectedBooking);
+            Assert.NotNull(bookingCreatedDto);
+            Assert.NotNull(bookingDto);
             Assert.Equal(bookingDto.Id, rejectedBooking.Id);
             Assert.Equal(BookingStatus.Rejected, rejectedBooking.Status);
             Assert.NotNull(rejectedBooking.ProcessedAt);
@@ -254,6 +264,7 @@ namespace BookingServices.Tests
             var updatedEvent = await eventService.GetEventAsync(createdEvent.Id);
 
             // Assert
+            Assert.NotNull(updatedEvent);
             Assert.Equal(10, bookings.Length);
 
             Assert.All(bookings, Assert.NotNull);

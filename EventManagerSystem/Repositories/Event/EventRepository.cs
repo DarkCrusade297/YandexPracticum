@@ -39,7 +39,7 @@ namespace EventManagerSystem.Repositories.Event
             return allEvents;
         }
 
-        public async Task<EventModel> GetEventByIdAsync(Guid id)
+        public async Task<EventModel?> GetEventByIdAsync(Guid id)
         {
             var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
             return ev;
@@ -52,7 +52,8 @@ namespace EventManagerSystem.Repositories.Event
 
         public async Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
         {
-            var model = await GetEventByIdAsync(id);
+            var model = await GetEventByIdAsync(id)
+                ?? throw new KeyNotFoundException($"Event with id '{id}' was not found.");
             model.Title = eventDto.Title;
             model.Description = eventDto.Description;
             model.StartAt = eventDto.StartAt;

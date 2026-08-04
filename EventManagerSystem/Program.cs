@@ -1,5 +1,7 @@
 using EventManagerSystem.DataAccess;
 using EventManagerSystem.Middleware;
+using EventManagerSystem.Repositories.Booking;
+using EventManagerSystem.Repositories.Event;
 using EventManagerSystem.Services;
 using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
@@ -17,6 +19,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 
 // Services
+builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddHostedService<BookingProcessorService>();
@@ -53,7 +57,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 //app.UseHttpsRedirection();

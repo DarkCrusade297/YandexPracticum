@@ -31,9 +31,11 @@ namespace EventManagerSystem.Controllers
         [HttpPost("/events/{id}/book")]
         [ProducesResponseType(typeof(CreatedBookingDto), StatusCodes.Status202Accepted)]
         [ProducesResponseType(typeof(NoAvailableSeatsException), StatusCodes.Status409Conflict)]
-        public async Task<ActionResult<CreatedBookingDto?>> CreateBookingByEventId(Guid id)
+        public async Task<ActionResult<CreatedBookingDto>> CreateBookingByEventId(Guid id)
         {
-            var bk = await _bookingService.CreateBookingAsync(id);
+            var bk = await _bookingService.CreateBookingAsync(id)
+                ?? throw new InvalidOperationException("Booking was not created.");
+
             var locationUri = Url.Action(
                 nameof(GetBookingById),
                 new { id = bk.Id }
