@@ -1,4 +1,5 @@
-﻿using EventManagerSystem.DataAccess;
+﻿using Application.Common.Interfaces;
+using EventManagerSystem.DataAccess;
 using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Repositories.Event;

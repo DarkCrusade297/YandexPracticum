@@ -6,6 +6,7 @@ using EventManagerSystem.Services;
 using EventManagerSystem.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Application.Common.Interfaces;
 
 namespace EventService.Tests;
 

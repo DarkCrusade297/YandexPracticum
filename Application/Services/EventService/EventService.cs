@@ -1,9 +1,7 @@
-﻿using EventManagerSystem.DataAccess;
+﻿using Application.Common.Interfaces;
 using EventManagerSystem.DTO.Events;
 using EventManagerSystem.Exceptions;
 using EventManagerSystem.Models;
-using EventManagerSystem.Repositories.Event;
-using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Services.EventService

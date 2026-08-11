@@ -1,3 +1,4 @@
+using Application.Common.Interfaces;
 using EventManagerSystem.DataAccess;
 using EventManagerSystem.DTO.Bookings;
 using EventManagerSystem.DTO.Events;
