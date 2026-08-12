@@ -1,4 +1,4 @@
-﻿using Application.Entites;
+﻿using Application.DTO.Bookings;
 
 namespace EventManagerSystem.Repositories.Booking
 {

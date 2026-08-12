@@ -1,11 +1,11 @@
-﻿using EventManagerSystem.Models;
+﻿using Application.DTO.Events;
 
 namespace EventManagerSystem.DTO.Events
 {
     public class PaginatedResultDto
     {
         public int total { get; set; }
-        public List<EventModel> events { get; set; } = new List<EventModel>();
+        public List<EventDto> events { get; set; } = new List<EventDto>();
         public int currentPage { get; set; }
         public int pageSize { get; set; }
     }

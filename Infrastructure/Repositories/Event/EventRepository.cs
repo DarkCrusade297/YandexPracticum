@@ -1,6 +1,5 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Exceptions;
+﻿using Application.Common.Interfaces;
+using EventManagerSystem.DataAccess;
 using EventManagerSystem.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,22 +14,15 @@ namespace EventManagerSystem.Repositories.Event
             _db = db;
         }
 
-        public async Task<EventModel> CreateEventAsync(CreateEventDto eventDto)
+        public async Task<EventModel> CreateEventAsync(EventModel @event)
         {
-            var eventModel = new EventModel(eventDto.Title,
-                eventDto.Description,
-                eventDto.StartAt,
-                eventDto.EndAt,
-                eventDto.TotalSeats);
-            _db.Events.Add(eventModel);
-            await _db.SaveChangesAsync();
-            return eventModel;
+            await _db.Events.AddAsync(@event);
+            return @event;
         }
 
-        public async Task DeleteEventAsync(EventModel _event)
+        public void DeleteEvent(EventModel @event)
         {     
-            _db.Events.Remove(_event);
-            await _db.SaveChangesAsync();
+            _db.Events.Remove(@event);
         }
 
         public IQueryable<EventModel> GetAllEventsAsync()
@@ -41,7 +33,9 @@ namespace EventManagerSystem.Repositories.Event
 
         public async Task<EventModel?> GetEventByIdAsync(Guid id)
         {
-            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
+            var ev = await _db.Events
+                        .Include(e => e.bookingModels)
+                        .FirstOrDefaultAsync(e => e.Id == id);
             return ev;
         }
 
@@ -50,16 +44,9 @@ namespace EventManagerSystem.Repositories.Event
             await _db.SaveChangesAsync();
         }
 
-        public async Task<EventModel> UpdateEventAsync(Guid id, UpdateEventDto eventDto)
+        public void UpdateEvent(EventModel @event)
         {
-            var model = await GetEventByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Event with id '{id}' was not found.");
-            model.Title = eventDto.Title;
-            model.Description = eventDto.Description;
-            model.StartAt = eventDto.StartAt;
-            model.EndAt = eventDto.EndAt;
-            await _db.SaveChangesAsync();
-            return model;
+            _db.Events.Update(@event);
         }
     }
 }

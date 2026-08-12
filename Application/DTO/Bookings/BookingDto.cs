@@ -1,6 +1,6 @@
 ﻿using EventManagerSystem.Enums;
 
-namespace Application.Entites
+namespace Application.DTO.Bookings
 {
     public sealed record BookingDto(
     Guid Id,
