@@ -120,7 +120,7 @@ namespace EventManagerSystem.Services.BookingService
             {
                 throw new NotFoundException($"Booking with id {bookingForRejecting} not found");
             }
-            EventDto ev = null;
+            EventDto? ev = null;
             try
             {
                  ev = await eventService.GetEventAsync(booking.EventId);          

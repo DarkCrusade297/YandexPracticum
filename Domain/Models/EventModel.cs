@@ -15,7 +15,7 @@ namespace EventManagerSystem.Models
         private readonly List<BookingModel> _bookings = new();
         public IReadOnlyCollection<BookingModel> Bookings => _bookings.AsReadOnly();
 
-        public EventModel(Guid id, string title, string description, DateTime startAt, DateTime endAt, int totalSeats, int availableSeats)
+        public EventModel(Guid id, string title, string? description, DateTime startAt, DateTime endAt, int totalSeats, int availableSeats)
         {
             Id = id;
             Title = title;
@@ -28,10 +28,10 @@ namespace EventManagerSystem.Models
 
         public EventModel(string title, string? description, DateTime startAt, DateTime endAt, int totalSeats)
         {
-            if (Title == null)
+            if (title == null)
                 throw new ArgumentException("Title field is required", nameof(title));
 
-            if (Title.Length == 0)
+            if (title.Length == 0)
                 throw new ArgumentException("Title cannot be empty", nameof(title));
 
             if (startAt == default)

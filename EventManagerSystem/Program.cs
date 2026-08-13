@@ -1,30 +1,20 @@
-using Application.Common.Interfaces;
 using EventManagerSystem.DataAccess;
 using EventManagerSystem.Middleware;
-using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Services.EventService;
-using EventManagerSystem.Services.BookingService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using EventManagerSystem.Services;
-using EventManagerSystem.Repositories.Event;
+using Infrastructure;
+using Application;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Database
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Controllers
 builder.Services.AddControllers();
 
-// Services
-builder.Services.AddScoped<IEventRepository, EventRepository>();
-builder.Services.AddScoped<IBookingRepository, BookingRepository>();
-builder.Services.AddScoped<IEventService, EventService>();
-builder.Services.AddScoped<IBookingService, BookingService>();
-builder.Services.AddHostedService<BookingProcessorService>();
+// Infrastructure
+builder.Services.AddInfrastructure(builder.Configuration);
+
+//Services
+builder.Services.AddServices(builder.Configuration);
 
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -55,11 +45,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
+app.ApplyMigrations();
 
 //app.UseHttpsRedirection();
 
