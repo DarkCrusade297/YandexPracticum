@@ -1,8 +1,8 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Exceptions;
+﻿using EventManagerSystem.Exceptions;
 using EventManagerSystem.Repositories.Booking;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace EventManagerSystem.Services.BookingService
 {

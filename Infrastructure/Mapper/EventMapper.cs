@@ -5,16 +5,19 @@ namespace Infrastructure.Mapper
 {
     public static class EventMapper
     {
-        public static EventEntity ToEntity(EventModel domain) => new()
+        public static EventEntity ToEntity(EventModel domain)
         {
-            Id = domain.Id,
-            Title = domain.Title,
-            Description = domain.Description,
-            StartAt = domain.StartAt,
-            EndAt = domain.EndAt,
-            TotalSeats = domain.TotalSeats,
-            AvailableSeats = domain.AvailableSeats
-        };
+            return new EventEntity
+            {
+                Id = domain.Id,
+                Title = domain.Title,
+                Description = domain.Description,
+                StartAt = domain.StartAt,
+                EndAt = domain.EndAt,
+                TotalSeats = domain.TotalSeats,
+                AvailableSeats = domain.AvailableSeats
+            };
+        }
 
         public static EventModel ToDomain(EventEntity entity)
         {

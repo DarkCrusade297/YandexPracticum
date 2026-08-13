@@ -1,12 +1,13 @@
+using Application.Common.Interfaces;
 using EventManagerSystem.DataAccess;
 using EventManagerSystem.Middleware;
 using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Repositories.Event;
-using EventManagerSystem.Services;
-using EventManagerSystem.Services.BookingService;
 using EventManagerSystem.Services.EventService;
+using EventManagerSystem.Services.BookingService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using EventManagerSystem.Services;
+using EventManagerSystem.Repositories.Event;
 
 var builder = WebApplication.CreateBuilder(args);
 

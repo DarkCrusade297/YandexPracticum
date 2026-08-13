@@ -1,11 +1,12 @@
 ﻿using EventManagerSystem.DataAccess;
 using EventManagerSystem.Enums;
 using EventManagerSystem.Models;
+using Infrastructure.Mapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventManagerSystem.Repositories.Booking
 {
-    internal class BookingRepository : IBookingRepository
+    public class BookingRepository : IBookingRepository
     {
         private readonly AppDbContext _db;
 
@@ -20,14 +21,15 @@ namespace EventManagerSystem.Repositories.Booking
 
         public async Task<BookingModel> CreateBookingAsync(BookingModel booking)
         {
+            var bk = BookingMapper.ToEntity(booking);
             _db.Bookings.Add(booking);
             await _db.SaveChangesAsync();
-            return booking;
+            return BookingMapper.ToDomain(bk);
         }
 
         public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
         {
-            return _db.Bookings.Where(b => b.Status == Enums.BookingStatus.Pending).ToList();
+            return await _db.Bookings.Where(b => b.Status == BookingStatus.Pending).ToListAsync();
         }
 
         public async Task<List<Guid>> GetPendingBookingsIdsAsync()

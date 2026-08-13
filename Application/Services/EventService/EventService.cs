@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Services.EventService
 {
-    internal class EventService : IEventService
+    public class EventService : IEventService
     {
         private IEventRepository _eventRepository { get; set; }
         public EventService(IEventRepository eventRepository)
@@ -76,9 +76,9 @@ namespace EventManagerSystem.Services.EventService
         {
             var ev = await _eventRepository.GetEventByIdAsync(id);
             if (ev == null)
-                return false;
-            for (var i = 0; i < count; i++)
-                ev.ReleaseSeat();
+                throw new NotFoundException($"Event with id '{id}' not found");
+
+            ev.ReleaseSeat(count);
             await _eventRepository.SaveChangesAsync();
             return true;
         }
@@ -86,19 +86,11 @@ namespace EventManagerSystem.Services.EventService
         public async Task<bool> TryReserveSeats(Guid id, int count = 1)
         {
             var ev = await _eventRepository.GetEventByIdAsync(id);
+
             if (ev == null)
-                return false;
-            if (ev.AvailableSeats < count)
-                return false;
-            try
-            {
-                for (var i = 0; i < count; i++)
-                    ev.BookSeat();
-            }
-            catch (NoAvailableSeatsException)
-            {
-                return false;
-            }
+                throw new NotFoundException($"Event with id '{id}' not found");
+
+            ev.BookSeat(count);
             await _eventRepository.SaveChangesAsync();
             return true;
         }

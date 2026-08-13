@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EventManagerSystem.Repositories.Event
 {
-    internal class EventRepository : IEventRepository
+    public class EventRepository : IEventRepository
     {
         private readonly AppDbContext _db;
 
@@ -14,15 +14,15 @@ namespace EventManagerSystem.Repositories.Event
             _db = db;
         }
 
-        public async Task<EventModel> CreateEventAsync(EventModel @event)
+        public async Task<EventModel> CreateEventAsync(EventModel ev)
         {
-            await _db.Events.AddAsync(@event);
-            return @event;
+            await _db.Events.AddAsync(ev);
+            return ev;
         }
 
-        public void DeleteEvent(EventModel @event)
+        public void DeleteEvent(EventModel ev)
         {     
-            _db.Events.Remove(@event);
+            _db.Events.Remove(ev);
         }
 
         public IQueryable<EventModel> GetAllEventsAsync()
@@ -34,7 +34,7 @@ namespace EventManagerSystem.Repositories.Event
         public async Task<EventModel?> GetEventByIdAsync(Guid id)
         {
             var ev = await _db.Events
-                        .Include(e => e.bookingModels)
+                        .Include(e => e.Bookings)
                         .FirstOrDefaultAsync(e => e.Id == id);
             return ev;
         }
@@ -44,9 +44,9 @@ namespace EventManagerSystem.Repositories.Event
             await _db.SaveChangesAsync();
         }
 
-        public void UpdateEvent(EventModel @event)
+        public void UpdateEvent(EventModel ev)
         {
-            _db.Events.Update(@event);
+            _db.Events.Update(ev);
         }
     }
 }

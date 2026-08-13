@@ -17,7 +17,7 @@ namespace EventManagerSystem.DataAccess.Configurations.EventConfiguration
             builder.Property(e => e.EndAt).IsRequired();
             builder.Property(e => e.TotalSeats).IsRequired();
             builder.Property(e => e.AvailableSeats).IsRequired();
-            builder.HasMany(e => e.bookingModels).WithOne(b =>  b.Event).HasForeignKey(b => b.EventId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(e => e.Bookings).WithOne(b =>  b.Event).HasForeignKey(b => b.EventId).OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

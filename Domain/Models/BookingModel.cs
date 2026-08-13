@@ -5,33 +5,35 @@ namespace EventManagerSystem.Models
 {
     public class BookingModel
     {
-        public required Guid Id { get; init; } = Guid.NewGuid();
-        public required Guid EventId { get; init; }
-        public required BookingStatus Status { get; set; } = BookingStatus.Pending;
-        public required DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-        public DateTime? ProcessedAt { get; set; }
+        public Guid Id { get; private set; }
+        public Guid EventId { get; private set; }
+        public BookingStatus Status { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+        public DateTime? ProcessedAt { get; private set; }
 
-        public EventModel? Event { get; set; }
+        public EventModel? Event { get; private set; }
 
-        [SetsRequiredMembers]
-        public BookingModel(Guid eventId, DateTime? processedAt)
+        public BookingModel(Guid eventId)
         {
+            Id = Guid.NewGuid();
             EventId = eventId;
-            ProcessedAt = processedAt;
+            Status = BookingStatus.Pending;   
+            CreatedAt = DateTime.UtcNow;
+            ProcessedAt = null;               
         }
-
-        [SetsRequiredMembers]
-        public BookingModel(Guid id, Guid eventId, BookingStatus status, DateTime? processedAt)
+        public BookingModel(Guid id, Guid eventId, BookingStatus status, DateTime createdAt, DateTime? processedAt)
         {
             Id = id;
             EventId = eventId;
             Status = status;
+            CreatedAt = createdAt;
             ProcessedAt = processedAt;
         }
 
-        [SetsRequiredMembers]
-        public BookingModel()
+        public void UpdateStatus(BookingStatus status)
         {
+            Status = status;
+            ProcessedAt = DateTime.UtcNow;
         }
     }
 }

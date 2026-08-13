@@ -30,14 +30,19 @@ namespace EventManagerSystem.Models
         {
             if (Title == null)
                 throw new ArgumentException("Title field is required", nameof(title));
+
             if (Title.Length == 0)
                 throw new ArgumentException("Title cannot be empty", nameof(title));
+
             if (startAt == default)
                 throw new ArgumentException("StartAt field is required", nameof(startAt));
+
             if (endAt == default)
                 throw new ArgumentException("EndAt field is required", nameof(endAt));
+
             if (endAt <= startAt)
                 throw new ArgumentException("Дата окончания должна быть позже начала");
+
             if (totalSeats <= 0)
                 throw new ArgumentException("Количество мест обязательно и должно быть положительным");
 
@@ -50,23 +55,33 @@ namespace EventManagerSystem.Models
             AvailableSeats = totalSeats;
         }
 
-        public void BookSeat()
+        public void BookSeat(int count)
         {
-            if (AvailableSeats <= 0)
+            if (count <= 0)
+                throw new ArgumentException("Count must be greater than zero", nameof(count));
+
+            if (AvailableSeats < count)
                 throw new NoAvailableSeatsException("No available seats for this event");
-            AvailableSeats --;
+
+            AvailableSeats -= count;
         }
 
-        public void ReleaseSeat()
+        public void ReleaseSeat(int count)
         {
-            if (AvailableSeats < TotalSeats)
-                AvailableSeats ++;
+            if (count <= 0)
+                throw new ArgumentException("Count must be greater than zero", nameof(count));
+
+            if (AvailableSeats + count > TotalSeats)
+                throw new ArgumentException("Available seats after releasing should be less or equal then total seats", nameof(count));
+
+            AvailableSeats += count;
         }
 
         public void UpdateEvent(string title, string? description, DateTime startAt, DateTime endAt)
         {
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Title is required", nameof(title));
+
             if (endAt <= startAt)
                 throw new ArgumentException("Дата окончания должна быть позже начала");
 
