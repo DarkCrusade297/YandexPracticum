@@ -21,10 +21,9 @@ namespace EventManagerSystem.Repositories.Booking
 
         public async Task<BookingModel> CreateBookingAsync(BookingModel booking)
         {
-            var bk = BookingMapper.ToEntity(booking);
             _db.Bookings.Add(booking);
             await _db.SaveChangesAsync();
-            return BookingMapper.ToDomain(bk);
+            return booking;
         }
 
         public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()

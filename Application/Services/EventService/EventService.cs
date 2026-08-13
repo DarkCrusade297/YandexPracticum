@@ -36,7 +36,7 @@ namespace EventManagerSystem.Services.EventService
             var query = _eventRepository.GetAllEventsAsync();
 
             if (!string.IsNullOrWhiteSpace(title))
-                query = query.Where(e => e.Title.Contains(title));
+                query = query.Where(e => e.Title.ToLower().Contains(title.ToLower()));
 
             if (from.HasValue)
                 query = query.Where(e => e.StartAt >= from.Value);

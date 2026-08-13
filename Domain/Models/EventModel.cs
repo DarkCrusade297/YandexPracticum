@@ -1,4 +1,5 @@
 using EventManagerSystem.Exceptions;
+using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Models
 {
@@ -29,22 +30,22 @@ namespace EventManagerSystem.Models
         public EventModel(string title, string? description, DateTime startAt, DateTime endAt, int totalSeats)
         {
             if (title == null)
-                throw new ArgumentException("Title field is required", nameof(title));
+                throw new ValidationException("Title field is required");
 
             if (title.Length == 0)
-                throw new ArgumentException("Title cannot be empty", nameof(title));
+                throw new ValidationException("Title cannot be empty");
 
             if (startAt == default)
-                throw new ArgumentException("StartAt field is required", nameof(startAt));
+                throw new ValidationException("StartAt field is required");
 
             if (endAt == default)
-                throw new ArgumentException("EndAt field is required", nameof(endAt));
+                throw new ValidationException("EndAt field is required");
 
             if (endAt <= startAt)
-                throw new ArgumentException("Дата окончания должна быть позже начала");
+                throw new ValidationException("Дата окончания должна быть позже начала");
 
             if (totalSeats <= 0)
-                throw new ArgumentException("Количество мест обязательно и должно быть положительным");
+                throw new ValidationException("Количество мест обязательно и должно быть положительным");
 
             Id = Guid.NewGuid();
             Title = title;
@@ -58,7 +59,7 @@ namespace EventManagerSystem.Models
         public void BookSeat(int count)
         {
             if (count <= 0)
-                throw new ArgumentException("Count must be greater than zero", nameof(count));
+                throw new ValidationException("Count must be greater than zero");
 
             if (AvailableSeats < count)
                 throw new NoAvailableSeatsException("No available seats for this event");
