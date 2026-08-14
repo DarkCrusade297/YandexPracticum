@@ -1,4 +1,4 @@
-﻿using EventManagerSystem.Models;
+﻿using Domain.Models;
 
 namespace Application.Common.Interfaces
 {
@@ -6,7 +6,7 @@ namespace Application.Common.Interfaces
     {
         Task<EventModel> CreateEventAsync(EventModel ev);
         Task<EventModel?> GetEventByIdAsync(Guid id);
-        IQueryable<EventModel> GetAllEventsAsync();
+        Task<IEnumerable<EventModel>> GetAllEventsAsync();
         void UpdateEvent(EventModel ev);
         void DeleteEvent(EventModel ev);
         Task SaveChangesAsync();

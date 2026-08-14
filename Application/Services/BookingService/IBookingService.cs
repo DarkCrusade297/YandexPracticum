@@ -1,7 +1,7 @@
-﻿using EventManagerSystem.DTO.Bookings;
-using EventManagerSystem.Models;
+﻿using Application.DTO.Bookings;
+using Domain.Models;
 
-namespace EventManagerSystem.Services.BookingService
+namespace Application.Services.BookingService
 {
     public interface IBookingService
     {

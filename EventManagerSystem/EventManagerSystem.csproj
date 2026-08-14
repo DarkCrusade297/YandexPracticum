@@ -8,9 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-	<InternalsVisibleTo Include="BookingServices.Tests" />
-	<InternalsVisibleTo Include="EventService.Tests" />
-	<InternalsVisibleTo Include="EventApi.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>

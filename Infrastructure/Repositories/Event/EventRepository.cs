@@ -1,9 +1,11 @@
 ﻿using Application.Common.Interfaces;
-using EventManagerSystem.DataAccess;
-using EventManagerSystem.Models;
+using Infrastructure.DataAccess;
+using Domain.Exceptions;
+using Domain.Models;
+using Infrastructure.Mapper;
 using Microsoft.EntityFrameworkCore;
 
-namespace EventManagerSystem.Repositories.Event
+namespace Infrastructure.Repositories.Event
 {
     public class EventRepository : IEventRepository
     {
@@ -16,19 +18,24 @@ namespace EventManagerSystem.Repositories.Event
 
         public async Task<EventModel> CreateEventAsync(EventModel ev)
         {
-            await _db.Events.AddAsync(ev);
-            return ev;
+            var _event = EventMapper.ToEntity(ev);
+            await _db.Events.AddAsync(_event);
+            return EventMapper.ToDomain(_event);
         }
 
         public void DeleteEvent(EventModel ev)
-        {     
-            _db.Events.Remove(ev);
+        {
+            var entity = _db.Events.Local.FirstOrDefault(e => e.Id == ev.Id)
+                 ?? _db.Events.Find(ev.Id)
+                 ?? throw new NotFoundException($"Event with id: {ev.Id} not found");
+
+            _db.Events.Remove(entity);
         }
 
-        public IQueryable<EventModel> GetAllEventsAsync()
+        public async Task<IEnumerable<EventModel>> GetAllEventsAsync()
         {
-            var allEvents = _db.Events.AsQueryable();
-            return allEvents;
+            var allEvents = await _db.Events.ToListAsync();
+            return allEvents.Select(e => EventMapper.ToDomain(e)).ToList();
         }
 
         public async Task<EventModel?> GetEventByIdAsync(Guid id)
@@ -36,7 +43,10 @@ namespace EventManagerSystem.Repositories.Event
             var ev = await _db.Events
                         .Include(e => e.Bookings)
                         .FirstOrDefaultAsync(e => e.Id == id);
-            return ev;
+            if (ev is null)
+                return null;
+            var _event = EventMapper.ToDomain(ev);
+            return _event;
         }
 
         public async Task SaveChangesAsync()
@@ -44,9 +54,17 @@ namespace EventManagerSystem.Repositories.Event
             await _db.SaveChangesAsync();
         }
 
-        public void UpdateEvent(EventModel ev)
+        public void UpdateEvent(EventModel model)
         {
-            _db.Events.Update(ev);
+            var entity = _db.Events.Local.FirstOrDefault(e => e.Id == model.Id)
+                         ?? _db.Events.Find(model.Id)
+                         ?? throw new InvalidOperationException($"Event with id: {model.Id} not found");
+
+            entity.AvailableSeats = model.AvailableSeats;
+            entity.Title = model.Title;
+            entity.Description = model.Description;
+            entity.StartAt = model.StartAt;
+            entity.EndAt = model.EndAt;
         }
     }
 }

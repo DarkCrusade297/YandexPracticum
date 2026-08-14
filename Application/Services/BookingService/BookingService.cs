@@ -1,11 +1,11 @@
 ﻿using Application.DTO.Events;
-using EventManagerSystem.DTO.Bookings;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Models;
-using EventManagerSystem.Repositories.Booking;
+using Application.DTO.Bookings;
+using Domain.Enums;
+using Domain.Exceptions;
+using Domain.Models;
+using Application.Repositories.Booking;
 
-namespace EventManagerSystem.Services.BookingService
+namespace Application.Services.BookingService
 {
     public class BookingService : IBookingService
     {
@@ -69,7 +69,9 @@ namespace EventManagerSystem.Services.BookingService
                return new GetBookingDto
                {
                    Id = bk.Id,
+                   EventId = bk.EventId,
                    Status = bk.Status,
+                   CreatedAt = bk.CreatedAt,
                    ProcessedAt = bk.ProcessedAt
                };
             }
@@ -105,6 +107,8 @@ namespace EventManagerSystem.Services.BookingService
                     throw new NotFoundException($"Booking with id {bookingId} not found");
                 }
                 booking.UpdateStatus(BookingStatus.Confirmed);
+                
+                _bookingRepository.UpdateBooking(booking);
                 await _bookingRepository.SaveChangesAsync();
             }
             finally
@@ -133,6 +137,7 @@ namespace EventManagerSystem.Services.BookingService
                 }
 
                 booking.UpdateStatus(BookingStatus.Rejected);
+                _bookingRepository.UpdateBooking(booking);
                 await _bookingRepository.SaveChangesAsync();
             }
         }

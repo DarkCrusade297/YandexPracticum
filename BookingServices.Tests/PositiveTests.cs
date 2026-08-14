@@ -1,16 +1,17 @@
 using Application.Common.Interfaces;
-using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Bookings;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Repositories.Event;
-using EventManagerSystem.Services;
-using EventManagerSystem.Services.BookingService;
-using EventManagerSystem.Services.EventService;
+using Infrastructure.DataAccess;
+using Application.DTO.Bookings;
+using Application.DTO.Events;
+using Domain.Enums;
+using Domain.Exceptions;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
+using Application.Services;
+using Application.Services.BookingService;
+using Application.Services.EventService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Application.Repositories.Booking;
 
 namespace BookingServices.Tests
 {

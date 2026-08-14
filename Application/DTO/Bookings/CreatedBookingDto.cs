@@ -1,6 +1,6 @@
-﻿using EventManagerSystem.Enums;
+﻿using Domain.Enums;
 
-namespace EventManagerSystem.DTO.Bookings
+namespace Application.DTO.Bookings
 {
     public class CreatedBookingDto
     {

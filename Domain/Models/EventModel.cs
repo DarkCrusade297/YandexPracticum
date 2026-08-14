@@ -1,7 +1,7 @@
-using EventManagerSystem.Exceptions;
+using Domain.Exceptions;
 using System.ComponentModel.DataAnnotations;
 
-namespace EventManagerSystem.Models
+namespace Domain.Models
 {
     public class EventModel
     {

@@ -1,13 +1,13 @@
-﻿using EventManagerSystem.Models;
+﻿using Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EventManagerSystem.DataAccess
+namespace Infrastructure.DataAccess
 {
     public sealed class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-        public DbSet<EventModel> Events => Set<EventModel>();
-        public DbSet<BookingModel> Bookings => Set<BookingModel>();
+        public DbSet<EventEntity> Events => Set<EventEntity>();
+        public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

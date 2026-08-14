@@ -1,9 +1,5 @@
-﻿using EventManagerSystem.DTO.Bookings;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Models;
-using EventManagerSystem.Services;
-using EventManagerSystem.Services.BookingService;
-using EventManagerSystem.Services.EventService;
+﻿using Application.DTO.Bookings;
+using Application.Services.BookingService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManagerSystem.Controllers

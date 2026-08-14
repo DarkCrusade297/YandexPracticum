@@ -1,4 +1,4 @@
-﻿using EventManagerSystem.Models;
+﻿using Domain.Models;
 using Infrastructure.Entities;
 
 namespace Infrastructure.Mapper

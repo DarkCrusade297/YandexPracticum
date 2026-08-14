@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace EventManagerSystem.Enums
+namespace Domain.Enums
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum BookingStatus

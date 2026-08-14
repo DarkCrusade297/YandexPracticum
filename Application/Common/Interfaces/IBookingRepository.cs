@@ -1,13 +1,14 @@
-﻿using EventManagerSystem.Models;
+﻿using Domain.Models;
 
-namespace EventManagerSystem.Repositories.Booking
+namespace Application.Repositories.Booking
 {
     public interface IBookingRepository
     {
         Task<BookingModel?> GetBookingByIdAsync(Guid bookingId);
         Task<BookingModel> CreateBookingAsync(BookingModel booking);
-        Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
+        Task<List<BookingModel>> GetPendingBookingsAsync();
         Task<List<Guid>> GetPendingBookingsIdsAsync();
+        void UpdateBooking(BookingModel model);
         Task SaveChangesAsync();
     }
 }

@@ -1,7 +1,7 @@
-﻿using EventManagerSystem.Enums;
-using EventManagerSystem.Models;
+﻿using Domain.Enums;
+using Domain.Models;
 
-namespace EventManagerSystem.DTO.Bookings
+namespace Application.DTO.Bookings
 {
     public class GetBookingDto
     {

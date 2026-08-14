@@ -1,6 +1,6 @@
-﻿using EventManagerSystem.Exceptions;
+﻿using Domain.Exceptions;
+using EventManagerSystem.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Middleware
 {

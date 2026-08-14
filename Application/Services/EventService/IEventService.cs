@@ -1,8 +1,6 @@
 ﻿using Application.DTO.Events;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Models;
 
-namespace EventManagerSystem.Services
+namespace Application.Services
 {
     public interface IEventService
     {

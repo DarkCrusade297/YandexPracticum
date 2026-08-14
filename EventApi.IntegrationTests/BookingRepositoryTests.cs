@@ -1,9 +1,8 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Models;
-using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Repositories.Event;
+﻿using Infrastructure.DataAccess;
+using Domain.Enums;
+using Domain.Models;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
@@ -164,6 +163,7 @@ public sealed class BookingRepositoryTests
         await repository.SaveChangesAsync();
 
         booking.UpdateStatus(BookingStatus.Confirmed);
+        repository.UpdateBooking(booking);
 
         await repository.SaveChangesAsync();
 

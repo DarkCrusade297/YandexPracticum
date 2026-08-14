@@ -1,13 +1,11 @@
 ﻿using Application.Common.Interfaces;
-using EventManagerSystem.DataAccess;
-using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Repositories.Event;
+using Application.Repositories.Booking;
+using Infrastructure.DataAccess;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Infrastructure
 {

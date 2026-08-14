@@ -1,6 +1,6 @@
 ﻿using Application.DTO.Events;
 
-namespace EventManagerSystem.DTO.Events
+namespace Application.DTO.Events
 {
     public class PaginatedResultDto
     {

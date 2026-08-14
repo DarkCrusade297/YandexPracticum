@@ -1,12 +1,12 @@
-﻿using EventManagerSystem.Models;
+﻿using Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EventManagerSystem.DataAccess.Configurations.EventConfiguration
+namespace Infrastructure.DataAccess.Configurations.EventConfiguration
 {
-    public class EventConfiguration : IEntityTypeConfiguration<EventModel>
+    public class EventConfiguration : IEntityTypeConfiguration<EventEntity>
     {
 
-        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<EventModel> builder)
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<EventEntity> builder)
         {
             builder.ToTable("events");
             builder.HasKey(e => e.Id);

@@ -1,4 +1,4 @@
-﻿using EventManagerSystem.Enums;
+﻿using Domain.Enums;
 
 namespace Application.DTO.Bookings
 {

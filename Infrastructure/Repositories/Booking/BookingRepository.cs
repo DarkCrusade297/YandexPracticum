@@ -1,10 +1,11 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Models;
+﻿using Infrastructure.DataAccess;
+using Domain.Enums;
+using Domain.Models;
 using Infrastructure.Mapper;
 using Microsoft.EntityFrameworkCore;
+using Application.Repositories.Booking;
 
-namespace EventManagerSystem.Repositories.Booking
+namespace Infrastructure.Repositories.Booking
 {
     public class BookingRepository : IBookingRepository
     {
@@ -16,19 +17,24 @@ namespace EventManagerSystem.Repositories.Booking
         }
         public async Task<BookingModel?> GetBookingByIdAsync(Guid bookingId)
         {
-            return await _db.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
+            var bk = await _db.Bookings.FirstOrDefaultAsync(e => e.Id == bookingId);
+            if (bk is null)
+                return null;
+            return BookingMapper.ToDomain(bk);
         }
 
         public async Task<BookingModel> CreateBookingAsync(BookingModel booking)
         {
-            _db.Bookings.Add(booking);
+            var bk = BookingMapper.ToEntity(booking);
+            _db.Bookings.Add(bk);
             await _db.SaveChangesAsync();
             return booking;
         }
 
-        public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
+        public async Task<List<BookingModel>> GetPendingBookingsAsync()
         {
-            return await _db.Bookings.Where(b => b.Status == BookingStatus.Pending).ToListAsync();
+            var bks = await _db.Bookings.Where(b => b.Status == BookingStatus.Pending).ToListAsync();
+            return bks.Select(e => BookingMapper.ToDomain(e)).ToList();
         }
 
         public async Task<List<Guid>> GetPendingBookingsIdsAsync()
@@ -42,6 +48,16 @@ namespace EventManagerSystem.Repositories.Booking
         public async Task SaveChangesAsync()
         {
             await _db.SaveChangesAsync();
+        }
+
+        public void UpdateBooking(BookingModel model)
+        {
+            var entity = _db.Bookings.Local.FirstOrDefault(b => b.Id == model.Id)
+                         ?? _db.Bookings.Find(model.Id)
+                         ?? throw new InvalidOperationException($"Booking {model.Id} not found");
+
+            entity.Status = model.Status;
+            entity.ProcessedAt = model.ProcessedAt;
         }
     }
 }

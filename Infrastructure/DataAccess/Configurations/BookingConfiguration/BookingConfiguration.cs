@@ -1,13 +1,13 @@
-﻿using EventManagerSystem.Enums;
-using EventManagerSystem.Models;
+﻿using Domain.Enums;
+using Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace EventManagerSystem.DataAccess.Configurations.BookingConfiguration
+namespace Infrastructure.DataAccess.Configurations.BookingConfiguration
 {
-    public class BookingConfiguration : IEntityTypeConfiguration<BookingModel>
+    public class BookingConfiguration : IEntityTypeConfiguration<BookingEntity>
     {
-        public void Configure(EntityTypeBuilder<BookingModel> builder)
+        public void Configure(EntityTypeBuilder<BookingEntity> builder)
         {
             builder.ToTable("bookings");
             builder.HasKey(b => b.Id);

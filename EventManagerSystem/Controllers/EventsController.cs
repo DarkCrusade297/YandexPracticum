@@ -1,7 +1,5 @@
 using Application.DTO.Events;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Models;
-using EventManagerSystem.Services;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManagerSystem.Controllers

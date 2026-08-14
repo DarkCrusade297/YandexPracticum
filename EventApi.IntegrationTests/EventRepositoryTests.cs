@@ -1,10 +1,8 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
+﻿using Infrastructure.DataAccess;
 using FluentAssertions;
-using EventManagerSystem.Repositories.Event;
+using Infrastructure.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
-using EventManagerSystem.Models;
-using EventManagerSystem.Services.EventService;
+using Domain.Models;
 
 namespace EventManagerSystem.Tests;
 
@@ -104,7 +102,7 @@ public sealed class EventRepositoryTests
 
         await repository.SaveChangesAsync();
 
-        var result = await repository.GetAllEventsAsync().ToListAsync();
+        var result = await repository.GetAllEventsAsync();
 
         result.Should().HaveCount(3);
         result.Select(e => e.Title).Should().Contain(["Event 1", "Event 2", "Event 3"]);
@@ -147,8 +145,10 @@ public sealed class EventRepositoryTests
         var repository = CreateRepository(db);
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "To delete"));
+        await repository.SaveChangesAsync();
 
         repository.DeleteEvent(created);
+        await repository.SaveChangesAsync();
 
         var fromDb = await db.Events.SingleOrDefaultAsync(e => e.Id == created.Id);
 
@@ -164,6 +164,7 @@ public sealed class EventRepositoryTests
         var repository = CreateRepository(db);
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "Before save"));
+        await repository.SaveChangesAsync();
 
         created.UpdateEvent(
             "After save",
@@ -171,6 +172,7 @@ public sealed class EventRepositoryTests
             created.StartAt,
             created.EndAt);
 
+        repository.UpdateEvent(created);
         await repository.SaveChangesAsync();
 
         var fromDb = await db.Events.SingleAsync(e => e.Id == created.Id);

@@ -1,11 +1,10 @@
 ﻿using Application.Common.Interfaces;
 using Application.DTO.Events;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Models;
+using Domain.Exceptions;
+using Domain.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace EventManagerSystem.Services.EventService
+namespace Application.Services.EventService
 {
     public class EventService : IEventService
     {
@@ -33,7 +32,7 @@ namespace EventManagerSystem.Services.EventService
 
         public async Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
         {
-            var query = _eventRepository.GetAllEventsAsync();
+            var query = await _eventRepository.GetAllEventsAsync();
 
             if (!string.IsNullOrWhiteSpace(title))
                 query = query.Where(e => e.Title.ToLower().Contains(title.ToLower()));
@@ -79,6 +78,8 @@ namespace EventManagerSystem.Services.EventService
                 throw new NotFoundException($"Event with id '{id}' not found");
 
             ev.ReleaseSeat(count);
+
+            _eventRepository.UpdateEvent(ev);
             await _eventRepository.SaveChangesAsync();
             return true;
         }
@@ -91,6 +92,8 @@ namespace EventManagerSystem.Services.EventService
                 throw new NotFoundException($"Event with id '{id}' not found");
 
             ev.BookSeat(count);
+
+            _eventRepository.UpdateEvent(ev);
             await _eventRepository.SaveChangesAsync();
             return true;
         }

@@ -1,7 +1,7 @@
-﻿using EventManagerSystem.Enums;
+﻿using Domain.Enums;
 using System.Diagnostics.CodeAnalysis;
 
-namespace EventManagerSystem.Models
+namespace Domain.Models
 {
     public class BookingModel
     {

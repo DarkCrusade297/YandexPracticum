@@ -1,10 +1,10 @@
-﻿using EventManagerSystem.Exceptions;
-using EventManagerSystem.Repositories.Booking;
+﻿using Domain.Exceptions;
+using Application.Repositories.Booking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
-namespace EventManagerSystem.Services.BookingService
+using Application.Services.EventService;
+namespace Application.Services.BookingService
 {
     public class BookingProcessorService : BackgroundService
     {

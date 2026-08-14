@@ -1,4 +1,4 @@
-using EventManagerSystem.DataAccess;
+using Infrastructure.DataAccess;
 using EventManagerSystem.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;

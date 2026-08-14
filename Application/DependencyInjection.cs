@@ -1,6 +1,6 @@
-﻿using EventManagerSystem.Services;
-using EventManagerSystem.Services.BookingService;
-using EventManagerSystem.Services.EventService;
+﻿using Application.Services;
+using Application.Services.BookingService;
+using Application.Services.EventService;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

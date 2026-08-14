@@ -1,4 +1,4 @@
-﻿using EventManagerSystem.Models;
+﻿using Domain.Models;
 
 namespace Application.DTO.Events
 {
