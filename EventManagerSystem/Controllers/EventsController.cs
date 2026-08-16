@@ -1,6 +1,5 @@
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Models;
-using EventManagerSystem.Services;
+using Application.DTO.Events;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManagerSystem.Controllers
@@ -31,7 +30,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<EventModel>> GetEventById(Guid id)
+        public async Task<ActionResult<EventDto>> GetEventById(Guid id)
         {
             var ev = await _eventService.GetEventAsync(id);
             return Ok(ev);

@@ -1,6 +1,6 @@
-﻿using EventManagerSystem.Exceptions;
+﻿using Domain.Exceptions;
+using EventManagerSystem.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace EventManagerSystem.Middleware
 {
@@ -61,7 +61,7 @@ namespace EventManagerSystem.Middleware
             => ex switch
             {
                 NotFoundException nfe => (StatusCodes.Status404NotFound, ex.Message),
-                ValidationException ve => (StatusCodes.Status400BadRequest, ex.Message),
+                ArgumentException ve => (StatusCodes.Status400BadRequest, ex.Message),
                 ConflictException ce => (StatusCodes.Status409Conflict, ex.Message),
                 NoAvailableSeatsException nase => (StatusCodes.Status409Conflict, ex.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")

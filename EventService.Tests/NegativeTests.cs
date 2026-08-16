@@ -1,9 +1,10 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Repositories.Event;
-using EventManagerSystem.Services;
-using EventManagerSystem.Services.EventService;
+﻿using Application.Common.Interfaces;
+using Infrastructure.DataAccess;
+using Application.DTO.Events;
+using Domain.Exceptions;
+using Infrastructure.Repositories.Event;
+using Application.Services;
+using Application.Services.EventService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel.DataAnnotations;
@@ -26,7 +27,7 @@ namespace EventService.Tests
                 options.UseInMemoryDatabase(dbName));
 
             services.AddScoped<IEventRepository, EventRepository>();
-            services.AddScoped<IEventService, EventManagerSystem.Services.EventService.EventService>();
+            services.AddScoped<IEventService, Application.Services.EventService.EventService>();
 
             _serviceProvider = services.BuildServiceProvider();
 

@@ -1,4 +1,4 @@
-﻿using EventManagerSystem.DataAccess;
+﻿using Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 

@@ -25,11 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\Application\Application.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\EventManagerSystem\EventManagerSystem.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
 
 </Project>

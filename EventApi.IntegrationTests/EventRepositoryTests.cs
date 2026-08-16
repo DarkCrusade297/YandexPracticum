@@ -1,8 +1,8 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
+﻿using Infrastructure.DataAccess;
 using FluentAssertions;
-using EventManagerSystem.Repositories.Event;
+using Infrastructure.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
+using Domain.Models;
 
 namespace EventManagerSystem.Tests;
 
@@ -21,19 +21,12 @@ public sealed class EventRepositoryTests
         return new EventRepository(db);
     }
 
-    private static CreateEventDto CreateEventDto(
+    private static EventModel CreateEventDto(
         string title = "Test event",
         string description = "Test description",
         int totalSeats = 100)
     {
-        return new CreateEventDto
-        {
-            Title = title,
-            Description = description,
-            StartAt = DateTime.UtcNow.AddDays(1),
-            EndAt = DateTime.UtcNow.AddDays(1).AddHours(2),
-            TotalSeats = totalSeats
-        };
+        return new EventModel(title, description, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2), totalSeats);
     }
 
     [Fact]
@@ -47,6 +40,7 @@ public sealed class EventRepositoryTests
         var dto = CreateEventDto();
 
         var created = await repository.CreateEventAsync(dto);
+        await repository.SaveChangesAsync();
 
         created.Id.Should().NotBeEmpty();
         created.Title.Should().Be(dto.Title);
@@ -71,6 +65,8 @@ public sealed class EventRepositoryTests
         var repository = CreateRepository(db);
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "Event by id"));
+
+        await repository.SaveChangesAsync();
 
         var result = await repository.GetEventByIdAsync(created.Id);
 
@@ -104,7 +100,9 @@ public sealed class EventRepositoryTests
         await repository.CreateEventAsync(CreateEventDto(title: "Event 2"));
         await repository.CreateEventAsync(CreateEventDto(title: "Event 3"));
 
-        var result = await repository.GetAllEventsAsync().ToListAsync();
+        await repository.SaveChangesAsync();
+
+        var result = await repository.GetAllEventsAsync();
 
         result.Should().HaveCount(3);
         result.Select(e => e.Title).Should().Contain(["Event 1", "Event 2", "Event 3"]);
@@ -120,26 +118,22 @@ public sealed class EventRepositoryTests
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "Old title"));
 
-        var updateDto = new UpdateEventDto
-        {
-            Title = "Updated title",
-            Description = "Updated description",
-            StartAt = DateTime.UtcNow.AddDays(10),
-            EndAt = DateTime.UtcNow.AddDays(10).AddHours(3)
-        };
+        await repository.SaveChangesAsync();
 
-        var updated = await repository.UpdateEventAsync(created.Id, updateDto);
+        var newStartAt = DateTime.UtcNow.AddDays(10);
+        var newEndAt = newStartAt.AddHours(3);
 
-        updated.Id.Should().Be(created.Id);
-        updated.Title.Should().Be(updateDto.Title);
-        updated.Description.Should().Be(updateDto.Description);
-        updated.StartAt.Should().Be(updateDto.StartAt);
-        updated.EndAt.Should().Be(updateDto.EndAt);
+        created.UpdateEvent("Updated title", "Updated description", newStartAt, newEndAt);
+
+        repository.UpdateEvent(created);
+        await repository.SaveChangesAsync();
 
         var fromDb = await db.Events.SingleAsync(e => e.Id == created.Id);
 
-        fromDb.Title.Should().Be(updateDto.Title);
-        fromDb.Description.Should().Be(updateDto.Description);
+        fromDb.Title.Should().Be("Updated title");
+        fromDb.Description.Should().Be("Updated description");
+        fromDb.StartAt.Should().Be(newStartAt);
+        fromDb.EndAt.Should().Be(newEndAt);
     }
 
     [Fact]
@@ -151,8 +145,10 @@ public sealed class EventRepositoryTests
         var repository = CreateRepository(db);
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "To delete"));
+        await repository.SaveChangesAsync();
 
-        await repository.DeleteEventAsync(created);
+        repository.DeleteEvent(created);
+        await repository.SaveChangesAsync();
 
         var fromDb = await db.Events.SingleOrDefaultAsync(e => e.Id == created.Id);
 
@@ -168,10 +164,15 @@ public sealed class EventRepositoryTests
         var repository = CreateRepository(db);
 
         var created = await repository.CreateEventAsync(CreateEventDto(title: "Before save"));
+        await repository.SaveChangesAsync();
 
-        created.Title = "After save";
-        created.Description = "Changed by SaveChangesAsync";
+        created.UpdateEvent(
+            "After save",
+            "Changed by SaveChangesAsync",
+            created.StartAt,
+            created.EndAt);
 
+        repository.UpdateEvent(created);
         await repository.SaveChangesAsync();
 
         var fromDb = await db.Events.SingleAsync(e => e.Id == created.Id);

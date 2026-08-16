@@ -1,9 +1,8 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Enums;
-using EventManagerSystem.Models;
-using EventManagerSystem.Repositories.Booking;
-using EventManagerSystem.Repositories.Event;
+﻿using Infrastructure.DataAccess;
+using Domain.Enums;
+using Domain.Models;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,14 +32,11 @@ public sealed class BookingRepositoryTests
     {
         var eventRepository = CreateEventRepository(db);
 
-        return await eventRepository.CreateEventAsync(new CreateEventDto
-        {
-            Title = "Booking test event",
-            Description = "Event for booking tests",
-            StartAt = DateTime.UtcNow.AddDays(1),
-            EndAt = DateTime.UtcNow.AddDays(1).AddHours(2),
-            TotalSeats = 100
-        });
+        return await eventRepository.CreateEventAsync(new EventModel("Booking test event", 
+            "Event for booking tests", 
+            DateTime.UtcNow.AddDays(1), 
+            DateTime.UtcNow.AddDays(1).AddHours(2), 
+            100));
     }
 
     [Fact]
@@ -52,7 +48,7 @@ public sealed class BookingRepositoryTests
         var eventModel = await CreateEventAsync(db);
         var repository = CreateBookingRepository(db);
 
-        var booking = new BookingModel(eventModel.Id, processedAt: null);
+        var booking = new BookingModel(eventModel.Id);
 
         var created = await repository.CreateBookingAsync(booking);
 
@@ -78,7 +74,7 @@ public sealed class BookingRepositoryTests
         var repository = CreateBookingRepository(db);
 
         var booking = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id, processedAt: null));
+            new BookingModel(eventModel.Id));
 
         var result = await repository.GetBookingByIdAsync(booking.Id);
 
@@ -111,10 +107,10 @@ public sealed class BookingRepositoryTests
         var repository = CreateBookingRepository(db);
 
         var pending1 = await repository.CreateBookingAsync(
-            new BookingModel(Guid.NewGuid(), eventModel.Id, BookingStatus.Pending, processedAt: null));
+            new BookingModel(eventModel.Id));
 
         var pending2 = await repository.CreateBookingAsync(
-            new BookingModel(Guid.NewGuid(), eventModel.Id, BookingStatus.Pending, processedAt: null));
+            new BookingModel(eventModel.Id));
 
         var result = await repository.GetPendingBookingsAsync();
 
@@ -134,20 +130,22 @@ public sealed class BookingRepositoryTests
         var repository = CreateBookingRepository(db);
 
         var pending1 = await repository.CreateBookingAsync(
-            new BookingModel(Guid.NewGuid(), eventModel.Id, BookingStatus.Pending, processedAt: null));
+            new BookingModel(eventModel.Id));
 
         var pending2 = await repository.CreateBookingAsync(
-            new BookingModel(Guid.NewGuid(), eventModel.Id, BookingStatus.Pending, processedAt: null));
+            new BookingModel(eventModel.Id));
 
-        var confirmed = await repository.CreateBookingAsync(
-            new BookingModel(Guid.NewGuid(), eventModel.Id, BookingStatus.Confirmed, processedAt: DateTime.UtcNow));
+        var confirmedBooking  = new BookingModel(eventModel.Id);
+        confirmedBooking.UpdateStatus(BookingStatus.Confirmed);
+
+        await repository.SaveChangesAsync();
 
         var ids = await repository.GetPendingBookingsIdsAsync();
 
         ids.Should().HaveCount(2);
         ids.Should().Contain(pending1.Id);
         ids.Should().Contain(pending2.Id);
-        ids.Should().NotContain(confirmed.Id);
+        ids.Should().NotContain(confirmedBooking.Id);
     }
 
     [Fact]
@@ -160,10 +158,12 @@ public sealed class BookingRepositoryTests
         var repository = CreateBookingRepository(db);
 
         var booking = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id, processedAt: null));
+            new BookingModel(eventModel.Id));
 
-        booking.Status = BookingStatus.Confirmed;
-        booking.ProcessedAt = DateTime.UtcNow;
+        await repository.SaveChangesAsync();
+
+        booking.UpdateStatus(BookingStatus.Confirmed);
+        repository.UpdateBooking(booking);
 
         await repository.SaveChangesAsync();
 

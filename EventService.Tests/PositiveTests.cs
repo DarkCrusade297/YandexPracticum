@@ -1,11 +1,13 @@
-﻿using EventManagerSystem.DataAccess;
-using EventManagerSystem.DTO.Events;
-using EventManagerSystem.Exceptions;
-using EventManagerSystem.Models;
-using EventManagerSystem.Services;
-using EventManagerSystem.Repositories.Event;
+﻿using Infrastructure.DataAccess;
+using Application.DTO.Events;
+using Domain.Exceptions;
+using Domain.Models;
+using Application.Services;
+using Infrastructure.Repositories.Event;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Application.Common.Interfaces;
+using Infrastructure.Mapper;
 
 namespace EventService.Tests;
 
@@ -26,7 +28,7 @@ public class PositiveTests : IDisposable
             options.UseInMemoryDatabase(dbName));
 
         services.AddScoped<IEventRepository, EventRepository>();
-        services.AddScoped<IEventService, EventManagerSystem.Services.EventService.EventService>();
+        services.AddScoped<IEventService, Application.Services.EventService.EventService>();
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -294,7 +296,8 @@ public class PositiveTests : IDisposable
 
     private async Task SeedEventsAsync(params EventModel[] events)
     {
-        _context.Events.AddRange(events);
+        var entities = events.Select(e => EventMapper.ToEntity(e)).ToList();
+        _context.Events.AddRange(entities);
         await _context.SaveChangesAsync();
     }
 
