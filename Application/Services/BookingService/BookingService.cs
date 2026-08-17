@@ -119,26 +119,64 @@ namespace Application.Services.BookingService
 
         public async Task RejectBookingAsync(Guid bookingForRejecting)
         {
-            var booking = await _bookingRepository.GetBookingByIdAsync(bookingForRejecting);
-            if (booking is null)
-            {
-                throw new NotFoundException($"Booking with id {bookingForRejecting} not found");
-            }
-            EventDto? ev = null;
+            await _bookingLock.WaitAsync();
             try
             {
-                 ev = await eventService.GetEventAsync(booking.EventId);          
-            }
-            finally
-            {
-                if (ev != null)
+                var booking = await _bookingRepository.GetBookingByIdAsync(bookingForRejecting);
+                if (booking is null)
                 {
-                    await eventService.ReleaseSeats(ev.Id);
+                    throw new NotFoundException($"Booking with id {bookingForRejecting} not found");
                 }
+
+                var ev = await eventService.GetEventAsync(booking.EventId);
+                if (ev is null)
+                {
+                    throw new NotFoundException($"Event with id {booking.EventId} not found");
+                }
+
+                await eventService.ReleaseSeats(ev.Id);
 
                 booking.UpdateStatus(BookingStatus.Rejected);
                 _bookingRepository.UpdateBooking(booking);
                 await _bookingRepository.SaveChangesAsync();
+            }
+            finally
+            {
+                _bookingLock.Release();
+            }
+        }
+
+        public async Task CancelBookingAsync(Guid bookingForCancellingId)
+        {
+            await _bookingLock.WaitAsync();
+            try
+            {
+                var booking = await _bookingRepository.GetBookingByIdAsync(bookingForCancellingId);
+                if (booking is null)
+                {
+                    throw new NotFoundException($"Booking with id {bookingForCancellingId} not found");
+                }
+
+                if (booking.Status == BookingStatus.Cancelled)
+                {
+                    throw new BookingCancelException($"Booking with id {bookingForCancellingId} already was cancelled");
+                }
+
+                var ev = await eventService.GetEventAsync(booking.EventId);
+                if (ev is null)
+                {
+                    throw new NotFoundException($"Event with id {booking.EventId} not found");
+                }
+
+                await eventService.ReleaseSeats(ev.Id);
+
+                booking.UpdateStatus(BookingStatus.Cancelled);
+                _bookingRepository.UpdateBooking(booking);
+                await _bookingRepository.SaveChangesAsync();
+            }
+            finally
+            {
+                _bookingLock.Release();
             }
         }
     }

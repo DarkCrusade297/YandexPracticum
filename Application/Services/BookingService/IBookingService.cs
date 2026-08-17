@@ -11,5 +11,6 @@ namespace Application.Services.BookingService
         Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
         Task UpdateBookingAsync(Guid bookingId);
         Task RejectBookingAsync(Guid bookingForRejectingId);
+        Task CancelBookingAsync(Guid bookingForCancellingId);
     }
 }

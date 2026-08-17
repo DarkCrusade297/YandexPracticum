@@ -64,6 +64,7 @@ namespace EventManagerSystem.Middleware
                 ArgumentException ve => (StatusCodes.Status400BadRequest, ex.Message),
                 ConflictException ce => (StatusCodes.Status409Conflict, ex.Message),
                 NoAvailableSeatsException nase => (StatusCodes.Status409Conflict, ex.Message),
+                BookingCancelException bce => (StatusCodes.Status409Conflict, bce.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
             };
     }

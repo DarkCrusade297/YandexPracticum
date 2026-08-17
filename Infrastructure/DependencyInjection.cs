@@ -3,6 +3,7 @@ using Application.Repositories.Booking;
 using Infrastructure.DataAccess;
 using Infrastructure.Repositories.Booking;
 using Infrastructure.Repositories.Event;
+using Infrastructure.Repositories.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ namespace Infrastructure
             // Services
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             return services;
         }
