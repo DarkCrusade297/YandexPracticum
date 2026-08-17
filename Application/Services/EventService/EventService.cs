@@ -63,7 +63,7 @@ namespace Application.Services.EventService
             };
         }
 
-        public async Task<EventDto?> GetEventAsync(Guid id)
+        public async Task<EventDto> GetEventAsync(Guid id)
         {
             var ev = await _eventRepository.GetEventByIdAsync(id);
             if (ev is null)

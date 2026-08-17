@@ -37,16 +37,16 @@ namespace Application.Services.BookingService
                 _bookingLock.Release();
             }
         }
-        public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId)
+        public async Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId, Guid userId)
         {   
             await _bookingLock.WaitAsync(new CancellationToken());
             try
             {
                 await eventService.GetEventAsync(eventId);
                 await eventService.TryReserveSeats(eventId);
-                var booking = new BookingModel(eventId);
+                var booking = new BookingModel(eventId, userId);
                 var bk = await _bookingRepository.CreateBookingAsync(booking);
-                var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, Status = bk.Status };
+                var cbkdto = new CreatedBookingDto { Id = bk.Id, EventId = bk.EventId, UserId = bk.UserId, Status = bk.Status };
                 return cbkdto;
             }
             finally
@@ -70,6 +70,7 @@ namespace Application.Services.BookingService
                {
                    Id = bk.Id,
                    EventId = bk.EventId,
+                   UserId = bk.UserId,
                    Status = bk.Status,
                    CreatedAt = bk.CreatedAt,
                    ProcessedAt = bk.ProcessedAt
@@ -129,10 +130,6 @@ namespace Application.Services.BookingService
                 }
 
                 var ev = await eventService.GetEventAsync(booking.EventId);
-                if (ev is null)
-                {
-                    throw new NotFoundException($"Event with id {booking.EventId} not found");
-                }
 
                 await eventService.ReleaseSeats(ev.Id);
 
@@ -163,10 +160,6 @@ namespace Application.Services.BookingService
                 }
 
                 var ev = await eventService.GetEventAsync(booking.EventId);
-                if (ev is null)
-                {
-                    throw new NotFoundException($"Event with id {booking.EventId} not found");
-                }
 
                 await eventService.ReleaseSeats(ev.Id);
 

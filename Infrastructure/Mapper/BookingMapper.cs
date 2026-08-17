@@ -11,6 +11,7 @@ namespace Infrastructure.Mapper
             {
                 Id = domain.Id,
                 EventId = domain.EventId,
+                UserId = domain.UserId, 
                 CreatedAt = domain.CreatedAt,
                 Status = domain.Status,
                 ProcessedAt = domain.ProcessedAt,
@@ -19,7 +20,7 @@ namespace Infrastructure.Mapper
 
         public static BookingModel ToDomain(BookingEntity entity)
         {
-            var model = new BookingModel(entity.Id, entity.EventId, entity.Status, entity.CreatedAt, entity.ProcessedAt);
+            var model = new BookingModel(entity.Id, entity.EventId, entity.UserId, entity.Status, entity.CreatedAt, entity.ProcessedAt);
             return model;
         }
     }

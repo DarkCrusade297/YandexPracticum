@@ -5,7 +5,7 @@ namespace Application.Services.BookingService
 {
     public interface IBookingService
     {
-        Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId);
+        Task<CreatedBookingDto?> CreateBookingAsync(Guid eventId, Guid userId);
         Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId);
         Task<BookingModel> GetBookingModelByIdAsync(Guid id);
         Task<IEnumerable<BookingModel>> GetPendingBookingsAsync();
