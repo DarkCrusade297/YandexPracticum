@@ -34,7 +34,7 @@ namespace Application.Services.UserService
             }
 
             var passwordHash = _passwordService.Hash(request.Password);
-            var user = new UserModel(request.Login, passwordHash, UserRoles.User);
+            var user = new UserModel(request.Login, passwordHash, request.role);
 
             await _userRepository.CreateUserAsync(user);
             await _userRepository.SaveChangesAsync();
