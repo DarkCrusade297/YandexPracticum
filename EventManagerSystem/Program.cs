@@ -1,9 +1,12 @@
-using Infrastructure.DataAccess;
+using Application;
+using Application.Common.Settings;
+using Application.Services.JwtTokenService;
 using EventManagerSystem.Middleware;
+using Infrastructure;
+using Infrastructure.DataAccess;
+using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using Infrastructure;
-using Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +31,10 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API for event management and bookings"
     });
 });
+builder.Services.Configure<JwtSettings>(
+    builder.Configuration.GetSection(JwtSettings.SectionName));
+
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 var app = builder.Build();
 
@@ -47,8 +54,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.ApplyMigrations();
 
-//app.UseHttpsRedirection();
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
