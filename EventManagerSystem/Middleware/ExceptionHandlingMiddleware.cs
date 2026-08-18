@@ -68,6 +68,8 @@ namespace EventManagerSystem.Middleware
                 BookingLimitExceededException blee => (StatusCodes.Status409Conflict, blee.Message),
                 EventAlreadyPassedException eape => (StatusCodes.Status400BadRequest, eape.Message),
                 ForbiddenOperationException foe => (StatusCodes.Status403Forbidden, foe.Message),
+                UserAlreadyExistsException uaee => (StatusCodes.Status409Conflict, uaee.Message),
+                InvalidCredentialsException ice => (StatusCodes.Status400BadRequest, ice.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
             };
     }

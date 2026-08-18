@@ -42,7 +42,15 @@ namespace Application.Services.BookingService
             await _bookingLock.WaitAsync(new CancellationToken());
             try
             {
-                await eventService.GetEventAsync(eventId);
+                var ev = await eventService.GetEventAsync(eventId);
+                if (ev.StartAt <  DateTime.UtcNow)
+                    throw new EventAlreadyPassedException(eventId);
+                var activeBookingsCount = await _bookingRepository.CountActiveBookingsByUserIdAsync(userId);
+                if (activeBookingsCount >= BookingLimitExceededException.MaxActiveBookingsPerUser)
+                {
+                    throw new BookingLimitExceededException(userId);
+                }
+
                 await eventService.TryReserveSeats(eventId);
                 var booking = new BookingModel(eventId, userId);
                 var bk = await _bookingRepository.CreateBookingAsync(booking);
@@ -55,31 +63,32 @@ namespace Application.Services.BookingService
             }
         }
 
-        public async Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId)
+        public async Task<GetBookingDto?> GetBookingByIdAsync(Guid bookingId, Guid currentUserId, UserRoles currentUserRole)
         {
-            await _bookingLock.WaitAsync(new CancellationToken());
+            var bk = await _bookingRepository.GetBookingByIdAsync(bookingId);
+            if (bk is null)
+            {
+                throw new NotFoundException($"Booking with id {bookingId} not found");
+            }
 
-            try
+            var isOwner = bk.UserId == currentUserId;
+            var isAdmin = currentUserRole == UserRoles.Admin;
+
+            if (!isOwner && !isAdmin)
             {
-               var bk = await _bookingRepository.GetBookingByIdAsync(bookingId);
-               if (bk is null)
-               {
-                   throw new NotFoundException($"Booking with id {bookingId} not found");
-               }
-               return new GetBookingDto
-               {
-                   Id = bk.Id,
-                   EventId = bk.EventId,
-                   UserId = bk.UserId,
-                   Status = bk.Status,
-                   CreatedAt = bk.CreatedAt,
-                   ProcessedAt = bk.ProcessedAt
-               };
+                throw new ForbiddenOperationException(
+                    $"User '{currentUserId}' has no permission to view booking '{bookingId}'");
             }
-            finally
+
+            return new GetBookingDto
             {
-                _bookingLock.Release();
-            }
+                Id = bk.Id,
+                EventId = bk.EventId,
+                UserId = bk.UserId,
+                Status = bk.Status,
+                CreatedAt = bk.CreatedAt,
+                ProcessedAt = bk.ProcessedAt
+            };
         }
 
         public async Task<IEnumerable<BookingModel>> GetPendingBookingsAsync()
@@ -143,7 +152,7 @@ namespace Application.Services.BookingService
             }
         }
 
-        public async Task CancelBookingAsync(Guid bookingForCancellingId)
+        public async Task CancelBookingAsync(Guid bookingForCancellingId, Guid currentUserId, UserRoles currentUserRole)
         {
             await _bookingLock.WaitAsync();
             try
@@ -154,13 +163,21 @@ namespace Application.Services.BookingService
                     throw new NotFoundException($"Booking with id {bookingForCancellingId} not found");
                 }
 
+                var isOwner = booking.UserId == currentUserId;
+                var isAdmin = currentUserRole == UserRoles.Admin;
+
+                if (!isOwner && !isAdmin)
+                {
+                    throw new ForbiddenOperationException(
+                        $"User '{currentUserId}' has no permission to cancel booking '{bookingForCancellingId}'");
+                }
+
                 if (booking.Status == BookingStatus.Cancelled)
                 {
                     throw new BookingCancelException($"Booking with id {bookingForCancellingId} already was cancelled");
                 }
 
                 var ev = await eventService.GetEventAsync(booking.EventId);
-
                 await eventService.ReleaseSeats(ev.Id);
 
                 booking.UpdateStatus(BookingStatus.Cancelled);

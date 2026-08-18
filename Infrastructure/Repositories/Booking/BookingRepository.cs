@@ -59,5 +59,10 @@ namespace Infrastructure.Repositories.Booking
             entity.Status = model.Status;
             entity.ProcessedAt = model.ProcessedAt;
         }
+
+        public async Task<int> CountActiveBookingsByUserIdAsync(Guid userId)
+        {
+            return await _db.Bookings.CountAsync(b => b.UserId == userId &&(b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed));
+        }
     }
 }

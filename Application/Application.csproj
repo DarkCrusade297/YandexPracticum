@@ -15,9 +15,4 @@
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="DTO\Users\" />
-    <Folder Include="Services\UserService\" />
-  </ItemGroup>
-
 </Project>

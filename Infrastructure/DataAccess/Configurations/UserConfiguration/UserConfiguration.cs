@@ -28,6 +28,9 @@ namespace Infrastructure.DataAccess.Configurations.UserConfiguration
             builder.Property(u => u.Role)
                 .IsRequired()
                 .HasConversion<string>();
+
+            builder.HasIndex(u => u.Login)
+                .IsUnique();
         }
     }
 }

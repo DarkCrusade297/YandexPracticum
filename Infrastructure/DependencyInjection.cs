@@ -1,9 +1,11 @@
 ﻿using Application.Common.Interfaces;
 using Application.Repositories.Booking;
+using Application.Services.JwtTokenService;
 using Infrastructure.DataAccess;
 using Infrastructure.Repositories.Booking;
 using Infrastructure.Repositories.Event;
 using Infrastructure.Repositories.User;
+using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,7 @@ namespace Infrastructure
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
 
             return services;
         }

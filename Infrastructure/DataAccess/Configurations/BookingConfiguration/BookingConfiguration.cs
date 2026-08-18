@@ -19,6 +19,11 @@ namespace Infrastructure.DataAccess.Configurations.BookingConfiguration
             builder.Property(b => b.ProcessedAt).IsRequired(false);
             builder.HasIndex(b => b.EventId);
             builder.HasIndex(b => b.Status);
+
+            builder.HasOne(b => b.User)
+                .WithMany(u => u.Bookings)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
