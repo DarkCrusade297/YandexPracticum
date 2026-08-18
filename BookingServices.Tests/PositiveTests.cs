@@ -26,6 +26,7 @@ namespace BookingServices.Tests
         private readonly IBookingService _bookingService;
         private readonly IUserRepository _userRepository;
         private readonly IPasswordService _passwordService;
+        private readonly AppDbContext _context;
 
         private readonly Guid _testUserId;
 
@@ -54,6 +55,7 @@ namespace BookingServices.Tests
             _bookingService = _scope.ServiceProvider.GetRequiredService<IBookingService>();
             _userRepository = _scope.ServiceProvider.GetRequiredService<IUserRepository>();
             _passwordService = _scope.ServiceProvider.GetRequiredService<IPasswordService>();
+            _context = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             _testUserId = CreateTestUserAsync().GetAwaiter().GetResult();
         }
@@ -62,6 +64,17 @@ namespace BookingServices.Tests
         {
             var passwordHash = _passwordService.Hash("Test-Password-123");
             var user = new UserModel(Guid.NewGuid(), "test-user", passwordHash, UserRoles.User);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
+        }
+
+        private async Task<Guid> CreateAdditionalUserAsync(string login)
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), login, passwordHash, UserRoles.User);
 
             var created = await _userRepository.CreateUserAsync(user);
             await _userRepository.SaveChangesAsync();
@@ -308,6 +321,91 @@ namespace BookingServices.Tests
             Assert.Equal(5, uniqueIds.Count);
             Assert.Equal(0, updatedEvent.AvailableSeats);
         }
+
+        [Fact]
+        public async Task CreateBookingAsync_EventAlreadyPassed_ReturnsEventAlreadyPassedException()
+        {
+            // Arrange
+            var createEventDto = new CreateEventDto
+            {
+                Title = "Past Event",
+                Description = "Description",
+                StartAt = DateTime.UtcNow.AddDays(10),
+                EndAt = DateTime.UtcNow.AddDays(11),
+                TotalSeats = 10
+            };
+
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var eventId = createdEvent.Id;
+
+            var eventEntity = await _context.Events.SingleAsync(e => e.Id == eventId);
+            eventEntity.StartAt = DateTime.UtcNow.AddDays(-10);
+            eventEntity.EndAt = DateTime.UtcNow.AddDays(-9);
+            await _context.SaveChangesAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<EventAlreadyPassedException>(() =>
+                _bookingService.CreateBookingAsync(eventId, _testUserId));
+
+            Assert.Empty(await _context.Bookings.ToListAsync());
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_UserReachedActiveBookingsLimit_ThrowsBookingLimitExceededException()
+        {
+            // Arrange
+            var createEventDto = CreateDefaultEventDto(totalSeats: BookingLimitExceededException.MaxActiveBookingsPerUser + 5);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+
+            // Act
+            for (var i = 0; i < BookingLimitExceededException.MaxActiveBookingsPerUser; i++)
+            {
+                var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+                Assert.NotNull(booking);
+                Assert.Equal(BookingStatus.Pending, booking.Status);
+            }
+
+            // Assert
+            await Assert.ThrowsAsync<BookingLimitExceededException>(() =>
+                _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId));
+
+            var bookingsCount = await _context.Bookings.CountAsync(b => b.UserId == _testUserId);
+            Assert.Equal(BookingLimitExceededException.MaxActiveBookingsPerUser, bookingsCount);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_TwoUsersIndependentLimits_SecondUserNotAffectedByFirstUsersLimit()
+        {
+            // Arrange
+            var secondUserId = await CreateAdditionalUserAsync("second-test-user");
+
+            var createEventDto = CreateDefaultEventDto(totalSeats: BookingLimitExceededException.MaxActiveBookingsPerUser * 2 + 5);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+
+            // Act — первый пользователь доходит до своего лимита
+            for (var i = 0; i < BookingLimitExceededException.MaxActiveBookingsPerUser; i++)
+            {
+                await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            }
+
+            await Assert.ThrowsAsync<BookingLimitExceededException>(() =>
+                _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId));
+
+            // Act
+            var secondUserBooking = await _bookingService.CreateBookingAsync(createdEvent.Id, secondUserId);
+
+            // Assert
+            Assert.NotNull(secondUserBooking);
+            Assert.Equal(BookingStatus.Pending, secondUserBooking.Status);
+            Assert.Equal(secondUserId, secondUserBooking.UserId);
+
+            var firstUserBookingsCount = await _context.Bookings.CountAsync(b => b.UserId == _testUserId);
+            var secondUserBookingsCount = await _context.Bookings.CountAsync(b => b.UserId == secondUserId);
+
+            Assert.Equal(BookingLimitExceededException.MaxActiveBookingsPerUser, firstUserBookingsCount);
+            Assert.Equal(1, secondUserBookingsCount);
+        }
+
 
         private static CreateEventDto CreateDefaultEventDto(int totalSeats)
         {
