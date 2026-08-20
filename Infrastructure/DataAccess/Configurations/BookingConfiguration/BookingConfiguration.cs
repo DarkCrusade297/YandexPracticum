@@ -13,11 +13,17 @@ namespace Infrastructure.DataAccess.Configurations.BookingConfiguration
             builder.HasKey(b => b.Id);
             builder.Property(e => e.Id).ValueGeneratedNever();
             builder.Property(b => b.EventId).IsRequired();
+            builder.Property(b => b.UserId).IsRequired();
             builder.Property(b => b.Status).IsRequired().HasConversion<string>().HasMaxLength(20).HasDefaultValue(BookingStatus.Pending);
             builder.Property(b => b.CreatedAt).IsRequired();
             builder.Property(b => b.ProcessedAt).IsRequired(false);
             builder.HasIndex(b => b.EventId);
             builder.HasIndex(b => b.Status);
+
+            builder.HasOne(b => b.User)
+                .WithMany(u => u.Bookings)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

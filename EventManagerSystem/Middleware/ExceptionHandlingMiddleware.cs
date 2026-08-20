@@ -64,6 +64,12 @@ namespace EventManagerSystem.Middleware
                 ArgumentException ve => (StatusCodes.Status400BadRequest, ex.Message),
                 ConflictException ce => (StatusCodes.Status409Conflict, ex.Message),
                 NoAvailableSeatsException nase => (StatusCodes.Status409Conflict, ex.Message),
+                BookingCancelException bce => (StatusCodes.Status409Conflict, bce.Message),
+                BookingLimitExceededException blee => (StatusCodes.Status409Conflict, blee.Message),
+                EventAlreadyPassedException eape => (StatusCodes.Status400BadRequest, eape.Message),
+                ForbiddenOperationException foe => (StatusCodes.Status403Forbidden, foe.Message),
+                UserAlreadyExistsException uaee => (StatusCodes.Status409Conflict, uaee.Message),
+                InvalidCredentialsException ice => (StatusCodes.Status400BadRequest, ice.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
             };
     }

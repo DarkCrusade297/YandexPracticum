@@ -1,17 +1,20 @@
 using Application.Common.Interfaces;
-using Infrastructure.DataAccess;
 using Application.DTO.Bookings;
 using Application.DTO.Events;
-using Domain.Enums;
-using Domain.Exceptions;
-using Infrastructure.Repositories.Booking;
-using Infrastructure.Repositories.Event;
+using Application.Repositories.Booking;
 using Application.Services;
 using Application.Services.BookingService;
 using Application.Services.EventService;
+using Application.Services.PasswordService;
+using Domain.Enums;
+using Domain.Exceptions;
+using Domain.Models;
+using Infrastructure.DataAccess;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
+using Infrastructure.Repositories.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Application.Repositories.Booking;
 
 namespace BookingServices.Tests
 {
@@ -21,6 +24,11 @@ namespace BookingServices.Tests
         private readonly IServiceScope _scope;
         private readonly IEventService _eventService;
         private readonly IBookingService _bookingService;
+        private readonly IUserRepository _userRepository;
+        private readonly IPasswordService _passwordService;
+        private readonly AppDbContext _context;
+
+        private readonly Guid _testUserId;
 
         public PositiveTests()
         {
@@ -33,9 +41,11 @@ namespace BookingServices.Tests
 
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
+            services.AddSingleton<IPasswordService, PasswordService>();
 
             _serviceProvider = services.BuildServiceProvider();
 
@@ -43,20 +53,43 @@ namespace BookingServices.Tests
 
             _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
             _bookingService = _scope.ServiceProvider.GetRequiredService<IBookingService>();
+            _userRepository = _scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            _passwordService = _scope.ServiceProvider.GetRequiredService<IPasswordService>();
+            _context = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            _testUserId = CreateTestUserAsync().GetAwaiter().GetResult();
+        }
+
+        private async Task<Guid> CreateTestUserAsync()
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), "test-user", passwordHash, UserRoles.User);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
+        }
+
+        private async Task<Guid> CreateAdditionalUserAsync(string login)
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), login, passwordHash, UserRoles.User);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
         }
 
         [Fact]
         public async Task CreateBookingAsync_ValidDto_ReturnsBookingInfo()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
-            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Assert
             Assert.NotNull(booking);
             Assert.Equal(createdEvent.Id, booking.EventId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
@@ -65,16 +98,12 @@ namespace BookingServices.Tests
         [Fact]
         public async Task CreateBookingAsync_ValidDto_AvailableSeatsMinus()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
-            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
             var eventDto = await _eventService.GetEventAsync(createdEvent.Id);
 
-            // Assert
             Assert.NotNull(eventDto);
             Assert.NotNull(booking);
             Assert.Equal(createdEvent.Id, booking.EventId);
@@ -85,39 +114,31 @@ namespace BookingServices.Tests
         [Fact]
         public async Task CreateBookingAsync_ValidDto_BookingsAfterLimit()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 1);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
-            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Assert
             Assert.NotNull(booking);
             Assert.Equal(createdEvent.Id, booking.EventId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
 
             await Assert.ThrowsAsync<NoAvailableSeatsException>(() =>
-                _bookingService.CreateBookingAsync(createdEvent.Id));
+                _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId));
         }
 
         [Fact]
         public async Task CreateBookingAsync_ValidDto_BookingsBeforeLimit()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 3);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
-            var booking1 = await _bookingService.CreateBookingAsync(createdEvent.Id);
-            var booking2 = await _bookingService.CreateBookingAsync(createdEvent.Id);
-            var booking3 = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking1 = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            var booking2 = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            var booking3 = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
             var eventDto = await _eventService.GetEventAsync(createdEvent.Id);
 
-            // Assert
             Assert.NotNull(eventDto);
             Assert.NotNull(booking1);
             Assert.NotNull(booking2);
@@ -141,16 +162,12 @@ namespace BookingServices.Tests
         [Fact]
         public async Task CreateBookingAsync_CreateFewBookingForOneEvent_ReturnsBookingInfo()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
-            var booking1 = await _bookingService.CreateBookingAsync(createdEvent.Id);
-            var booking2 = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking1 = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            var booking2 = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Assert
             Assert.NotNull(booking1);
             Assert.NotNull(booking2);
 
@@ -166,17 +183,13 @@ namespace BookingServices.Tests
         [Fact]
         public async Task GetBookingAsync_ValidDto_ReturnsBooking()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Act
-            var createdBooking = await _bookingService.GetBookingByIdAsync(booking.Id);
+            var createdBooking = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
 
-            // Assert
             Assert.NotNull(createdBooking);
             Assert.Equal(booking.Id, createdBooking.Id);
             Assert.Equal(BookingStatus.Pending, createdBooking.Status);
@@ -186,18 +199,14 @@ namespace BookingServices.Tests
         [Fact]
         public async Task GetBookingAsync_ValidDto_ReturnsConfirmedStatus()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
-            var bookingCreatedDto = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var bookingCreatedDto = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Act
             await _bookingService.UpdateBookingAsync(bookingCreatedDto.Id);
 
-            var createdBooking = await _bookingService.GetBookingByIdAsync(bookingCreatedDto.Id);
+            var createdBooking = await _bookingService.GetBookingByIdAsync(bookingCreatedDto.Id, _testUserId, UserRoles.User);
 
-            // Assert
             Assert.NotNull(createdBooking);
             Assert.NotNull(bookingCreatedDto);
             Assert.Equal(bookingCreatedDto.Id, createdBooking.Id);
@@ -208,21 +217,17 @@ namespace BookingServices.Tests
         [Fact]
         public async Task GetBookingAsync_ValidDto_ReturnsRejectedStatus()
         {
-            // Arrange
             var createEventDto = CreateDefaultEventDto(totalSeats: 1);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
-            var bookingCreatedDto = await _bookingService.CreateBookingAsync(createdEvent.Id);
-            var bookingDto = await _bookingService.GetBookingByIdAsync(bookingCreatedDto.Id);
+            var bookingCreatedDto = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            var bookingDto = await _bookingService.GetBookingByIdAsync(bookingCreatedDto.Id, _testUserId, UserRoles.User);
 
-            // Act
             await _bookingService.RejectBookingAsync(bookingDto.Id);
 
-            var rejectedBooking = await _bookingService.GetBookingByIdAsync(bookingDto.Id);
+            var rejectedBooking = await _bookingService.GetBookingByIdAsync(bookingDto.Id, _testUserId, UserRoles.User);
 
-            var secondBooking = await _bookingService.CreateBookingAsync(createdEvent.Id);
+            var secondBooking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
 
-            // Assert
             Assert.NotNull(rejectedBooking);
             Assert.NotNull(bookingCreatedDto);
             Assert.NotNull(bookingDto);
@@ -238,34 +243,27 @@ namespace BookingServices.Tests
         [Fact]
         public async Task CreateBookingAsync_TenConcurrentRequests_ReturnsTenUniqueBookings()
         {
-            // Arrange
             const int concurrentRequests = 10;
 
             var createEventDto = CreateDefaultEventDto(totalSeats: 10);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
             var tasks = Enumerable.Range(0, concurrentRequests)
                 .Select(_ => Task.Run(async () =>
                 {
                     using var scope = _serviceProvider.CreateScope();
-
                     var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
-                    return await bookingService.CreateBookingAsync(createdEvent.Id);
+                    return await bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
                 }))
                 .ToArray();
 
             var bookings = await Task.WhenAll(tasks);
 
             using var checkScope = _serviceProvider.CreateScope();
-
             var eventService = checkScope.ServiceProvider.GetRequiredService<IEventService>();
-
             var updatedEvent = await eventService.GetEventAsync(createdEvent.Id);
 
-            // Assert
             Assert.NotNull(updatedEvent);
             Assert.Equal(10, bookings.Length);
 
@@ -273,57 +271,42 @@ namespace BookingServices.Tests
             Assert.All(bookings, b => Assert.Equal(createdEvent.Id, b!.EventId));
             Assert.All(bookings, b => Assert.Equal(BookingStatus.Pending, b!.Status));
 
-            var uniqueIds = bookings
-                .Select(b => b!.Id)
-                .Distinct()
-                .ToList();
+            var uniqueIds = bookings.Select(b => b!.Id).Distinct().ToList();
 
             Assert.Equal(10, uniqueIds.Count);
             Assert.Equal(0, updatedEvent.AvailableSeats);
         }
 
-
         [Fact]
         public async Task CreateBookingAsync_TwentyConcurrentRequestsFiveSeats_ReturnsExactlyFiveSuccessAndFifteenExceptions()
         {
-            // Arrange
             const int concurrentRequests = 20;
 
             var createEventDto = CreateDefaultEventDto(totalSeats: 5);
-
             var createdEvent = await _eventService.CreateEventAsync(createEventDto);
 
-            // Act
             var tasks = Enumerable.Range(0, concurrentRequests)
                 .Select(_ => Task.Run(async () =>
                 {
                     using var scope = _serviceProvider.CreateScope();
-
                     var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
-                    return await SafeCreateBookingAsync(bookingService, createdEvent.Id);
+                    return await SafeCreateBookingAsync(bookingService, createdEvent.Id, _testUserId);
                 }))
                 .ToArray();
 
             var results = await Task.WhenAll(tasks);
 
-            var succeeded = results
-                .Where(r => r.Success)
-                .ToList();
-
-            var failed = results
-                .Where(r => !r.Success)
-                .ToList();
+            var succeeded = results.Where(r => r.Success).ToList();
+            var failed = results.Where(r => !r.Success).ToList();
 
             using var checkScope = _serviceProvider.CreateScope();
-
             var context = checkScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var updatedEvent = await context.Events
                 .AsNoTracking()
                 .FirstAsync(e => e.Id == createdEvent.Id);
 
-            // Assert
             Assert.Equal(5, succeeded.Count);
             Assert.Equal(15, failed.Count);
 
@@ -333,16 +316,148 @@ namespace BookingServices.Tests
 
             Assert.All(failed, r => Assert.IsType<NoAvailableSeatsException>(r.Error));
 
-            var uniqueIds = succeeded
-                .Select(r => r.Booking!.Id)
-                .Distinct()
-                .ToList();
+            var uniqueIds = succeeded.Select(r => r.Booking!.Id).Distinct().ToList();
 
             Assert.Equal(5, uniqueIds.Count);
-
             Assert.Equal(0, updatedEvent.AvailableSeats);
         }
 
+        [Fact]
+        public async Task CreateBookingAsync_EventAlreadyPassed_ReturnsEventAlreadyPassedException()
+        {
+            // Arrange
+            var createEventDto = new CreateEventDto
+            {
+                Title = "Past Event",
+                Description = "Description",
+                StartAt = DateTime.UtcNow.AddDays(10),
+                EndAt = DateTime.UtcNow.AddDays(11),
+                TotalSeats = 10
+            };
+
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var eventId = createdEvent.Id;
+
+            var eventEntity = await _context.Events.SingleAsync(e => e.Id == eventId);
+            eventEntity.StartAt = DateTime.UtcNow.AddDays(-10);
+            eventEntity.EndAt = DateTime.UtcNow.AddDays(-9);
+            await _context.SaveChangesAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<EventAlreadyPassedException>(() =>
+                _bookingService.CreateBookingAsync(eventId, _testUserId));
+
+            Assert.Empty(await _context.Bookings.ToListAsync());
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_UserReachedActiveBookingsLimit_ThrowsBookingLimitExceededException()
+        {
+            // Arrange
+            var createEventDto = CreateDefaultEventDto(totalSeats: BookingLimitExceededException.MaxActiveBookingsPerUser + 5);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+
+            // Act
+            for (var i = 0; i < BookingLimitExceededException.MaxActiveBookingsPerUser; i++)
+            {
+                var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+                Assert.NotNull(booking);
+                Assert.Equal(BookingStatus.Pending, booking.Status);
+            }
+
+            // Assert
+            await Assert.ThrowsAsync<BookingLimitExceededException>(() =>
+                _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId));
+
+            var bookingsCount = await _context.Bookings.CountAsync(b => b.UserId == _testUserId);
+            Assert.Equal(BookingLimitExceededException.MaxActiveBookingsPerUser, bookingsCount);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_TwoUsersIndependentLimits_SecondUserNotAffectedByFirstUsersLimit()
+        {
+            // Arrange
+            var secondUserId = await CreateAdditionalUserAsync("second-test-user");
+
+            var createEventDto = CreateDefaultEventDto(totalSeats: BookingLimitExceededException.MaxActiveBookingsPerUser * 2 + 5);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+
+            // Act — первый пользователь доходит до своего лимита
+            for (var i = 0; i < BookingLimitExceededException.MaxActiveBookingsPerUser; i++)
+            {
+                await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+            }
+
+            await Assert.ThrowsAsync<BookingLimitExceededException>(() =>
+                _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId));
+
+            // Act
+            var secondUserBooking = await _bookingService.CreateBookingAsync(createdEvent.Id, secondUserId);
+
+            // Assert
+            Assert.NotNull(secondUserBooking);
+            Assert.Equal(BookingStatus.Pending, secondUserBooking.Status);
+            Assert.Equal(secondUserId, secondUserBooking.UserId);
+
+            var firstUserBookingsCount = await _context.Bookings.CountAsync(b => b.UserId == _testUserId);
+            var secondUserBookingsCount = await _context.Bookings.CountAsync(b => b.UserId == secondUserId);
+
+            Assert.Equal(BookingLimitExceededException.MaxActiveBookingsPerUser, firstUserBookingsCount);
+            Assert.Equal(1, secondUserBookingsCount);
+        }
+
+        [Fact]
+        public async Task CancelBookingAsync_OtherUserTriesToCancel_ThrowsForbiddenOperationException()
+        {
+            var createEventDto = CreateDefaultEventDto(totalSeats: 10);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            var strangerId = await CreateAdditionalUserAsync("stranger-user");
+
+            await Assert.ThrowsAsync<ForbiddenOperationException>(() =>
+                _bookingService.CancelBookingAsync(booking.Id, strangerId, UserRoles.User));
+
+            var stillActive = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Pending, stillActive.Status);
+            Assert.Null(stillActive.ProcessedAt);
+
+            var eventAfter = await _eventService.GetEventAsync(createdEvent.Id);
+            Assert.Equal(9, eventAfter.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CancelBookingAsync_OwnerCancelsOwnBooking_ReturnsCancelledStatusAndReleasesSeat()
+        {
+            var createEventDto = CreateDefaultEventDto(totalSeats: 1);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            await _bookingService.CancelBookingAsync(booking.Id, _testUserId, UserRoles.User);
+
+            var cancelled = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Cancelled, cancelled.Status);
+            Assert.NotNull(cancelled.ProcessedAt);
+
+            var eventAfter = await _eventService.GetEventAsync(createdEvent.Id);
+            Assert.Equal(1, eventAfter.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CancelBookingAsync_AdminCancelsAnotherUsersBooking_ReturnsCancelledStatus()
+        {
+            var adminId = await CreateAdditionalUserAsync("admin-user", UserRoles.Admin);
+
+            var createEventDto = CreateDefaultEventDto(totalSeats: 10);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            await _bookingService.CancelBookingAsync(booking.Id, adminId, UserRoles.Admin);
+
+            var cancelled = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Cancelled, cancelled.Status);
+            Assert.NotNull(cancelled.ProcessedAt);
+        }
 
         private static CreateEventDto CreateDefaultEventDto(int totalSeats)
         {
@@ -358,12 +473,12 @@ namespace BookingServices.Tests
 
         private static async Task<(bool Success, CreatedBookingDto? Booking, Exception? Error)> SafeCreateBookingAsync(
             IBookingService bookingService,
-            Guid eventId)
+            Guid eventId,
+            Guid userId)
         {
             try
             {
-                var booking = await bookingService.CreateBookingAsync(eventId);
-
+                var booking = await bookingService.CreateBookingAsync(eventId, userId);
                 return (true, booking, null);
             }
             catch (Exception ex)
@@ -376,6 +491,17 @@ namespace BookingServices.Tests
         {
             _scope.Dispose();
             _serviceProvider.Dispose();
+        }
+
+        private async Task<Guid> CreateAdditionalUserAsync(string login, UserRoles role = UserRoles.User)
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), login, passwordHash, role);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
         }
     }
 }

@@ -1,15 +1,19 @@
 ﻿using Application.Common.Interfaces;
-using Infrastructure.DataAccess;
 using Application.DTO.Events;
-using Domain.Exceptions;
-using Infrastructure.Repositories.Booking;
-using Infrastructure.Repositories.Event;
+using Application.Repositories.Booking;
 using Application.Services;
 using Application.Services.BookingService;
 using Application.Services.EventService;
+using Application.Services.PasswordService;
+using Domain.Enums;
+using Domain.Exceptions;
+using Domain.Models;
+using Infrastructure.DataAccess;
+using Infrastructure.Repositories.Booking;
+using Infrastructure.Repositories.Event;
+using Infrastructure.Repositories.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Application.Repositories.Booking;
 
 namespace BookingServices.Tests
 {
@@ -20,8 +24,11 @@ namespace BookingServices.Tests
 
         private readonly IEventService _eventService;
         private readonly IBookingService _bookingService;
+        private readonly IUserRepository _userRepository;
+        private readonly IPasswordService _passwordService;
         private readonly AppDbContext _context;
 
+        private readonly Guid _testUserId;
         public NegativeTests()
         {
             var dbName = Guid.NewGuid().ToString();
@@ -31,11 +38,13 @@ namespace BookingServices.Tests
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(dbName));
 
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
 
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IPasswordService, PasswordService>();
 
             _serviceProvider = services.BuildServiceProvider();
 
@@ -43,7 +52,22 @@ namespace BookingServices.Tests
 
             _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
             _bookingService = _scope.ServiceProvider.GetRequiredService<IBookingService>();
+            _userRepository = _scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            _passwordService = _scope.ServiceProvider.GetRequiredService<IPasswordService>();
             _context = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            _testUserId = CreateTestUserAsync().GetAwaiter().GetResult();
+        }
+
+        private async Task<Guid> CreateTestUserAsync()
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), "test-user", passwordHash, UserRoles.User);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
         }
 
         [Fact]
@@ -54,7 +78,7 @@ namespace BookingServices.Tests
 
             // Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() =>
-                _bookingService.CreateBookingAsync(nonExistingEventId));
+                _bookingService.CreateBookingAsync(nonExistingEventId, _testUserId));
 
             Assert.Empty(await _context.Bookings.ToListAsync());
         }
@@ -67,7 +91,7 @@ namespace BookingServices.Tests
 
             // Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() =>
-                _bookingService.GetBookingByIdAsync(nonExistingBookingId));
+                _bookingService.GetBookingByIdAsync(nonExistingBookingId, _testUserId, UserRoles.User));
 
             Assert.Empty(await _context.Bookings.ToListAsync());
         }
@@ -99,7 +123,7 @@ namespace BookingServices.Tests
                 _eventService.GetEventAsync(eventId));
 
             await Assert.ThrowsAsync<NotFoundException>(() =>
-                _bookingService.CreateBookingAsync(eventId));
+                _bookingService.CreateBookingAsync(eventId, _testUserId));
 
             Assert.Empty(await _context.Bookings.ToListAsync());
         }

@@ -6,6 +6,7 @@ namespace Application.Repositories.Booking
     {
         Task<BookingModel?> GetBookingByIdAsync(Guid bookingId);
         Task<BookingModel> CreateBookingAsync(BookingModel booking);
+        Task<int> CountActiveBookingsByUserIdAsync(Guid userId);
         Task<List<BookingModel>> GetPendingBookingsAsync();
         Task<List<Guid>> GetPendingBookingsIdsAsync();
         void UpdateBooking(BookingModel model);

@@ -17,12 +17,12 @@ namespace Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("EventManagerSystem.Models.BookingModel", b =>
+            modelBuilder.Entity("Infrastructure.Entities.BookingEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -43,16 +43,21 @@ namespace Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("bookings", (string)null);
                 });
 
-            modelBuilder.Entity("EventManagerSystem.Models.EventModel", b =>
+            modelBuilder.Entity("Infrastructure.Entities.EventEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -85,20 +90,60 @@ namespace Infrastructure.Migrations
                     b.ToTable("events", (string)null);
                 });
 
-            modelBuilder.Entity("EventManagerSystem.Models.BookingModel", b =>
+            modelBuilder.Entity("Infrastructure.Entities.UserEntity", b =>
                 {
-                    b.HasOne("EventManagerSystem.Models.EventModel", "Event")
-                        .WithMany("bookingModels")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Login")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Login")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Infrastructure.Entities.BookingEntity", b =>
+                {
+                    b.HasOne("Infrastructure.Entities.EventEntity", "Event")
+                        .WithMany("Bookings")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Infrastructure.Entities.UserEntity", "User")
+                        .WithMany("Bookings")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Event");
+
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("EventManagerSystem.Models.EventModel", b =>
+            modelBuilder.Entity("Infrastructure.Entities.EventEntity", b =>
                 {
-                    b.Navigation("bookingModels");
+                    b.Navigation("Bookings");
+                });
+
+            modelBuilder.Entity("Infrastructure.Entities.UserEntity", b =>
+                {
+                    b.Navigation("Bookings");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,5 +1,6 @@
 using Application.DTO.Events;
 using Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManagerSystem.Controllers
@@ -18,6 +19,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<PaginatedResultDto>> GetAllEvents([FromQuery] string? title,
             [FromQuery] DateTime? from,
             [FromQuery] DateTime? to,
@@ -30,6 +32,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<EventDto>> GetEventById(Guid id)
         {
             var ev = await _eventService.GetEventAsync(id);
@@ -37,6 +40,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto dto)
         {
             var ev = await _eventService.CreateEventAsync(dto);
@@ -44,6 +48,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateEventById(Guid id, [FromBody] UpdateEventDto eventDto)
         {
             await _eventService.UpdateEventAsync(id, eventDto);
@@ -51,6 +56,7 @@ namespace EventManagerSystem.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteEventById(Guid id)
         {
             await _eventService.DeleteEventAsync(id);

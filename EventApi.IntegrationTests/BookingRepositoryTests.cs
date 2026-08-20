@@ -3,6 +3,7 @@ using Domain.Enums;
 using Domain.Models;
 using Infrastructure.Repositories.Booking;
 using Infrastructure.Repositories.Event;
+using Infrastructure.Repositories.User;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,15 +29,34 @@ public sealed class BookingRepositoryTests
         return new EventRepository(db);
     }
 
+    private static UserRepository CreateUserRepository(AppDbContext db)
+    {
+        return new UserRepository(db);
+    }
+
     private static async Task<EventModel> CreateEventAsync(AppDbContext db)
     {
         var eventRepository = CreateEventRepository(db);
 
-        return await eventRepository.CreateEventAsync(new EventModel("Booking test event", 
-            "Event for booking tests", 
-            DateTime.UtcNow.AddDays(1), 
-            DateTime.UtcNow.AddDays(1).AddHours(2), 
+        return await eventRepository.CreateEventAsync(new EventModel("Booking test event",
+            "Event for booking tests",
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(1).AddHours(2),
             100));
+    }
+
+    private static async Task<UserModel> CreateUserAsync(AppDbContext db, string? login = null)
+    {
+        login ??= $"test-user-{Guid.NewGuid():N}";
+
+        var userRepository = CreateUserRepository(db);
+
+        var user = new UserModel(Guid.NewGuid(), login, "dummy-password-hash", UserRoles.User);
+
+        var created = await userRepository.CreateUserAsync(user);
+        await userRepository.SaveChangesAsync();
+
+        return created;
     }
 
     [Fact]
@@ -46,11 +66,13 @@ public sealed class BookingRepositoryTests
 
         await using var db = _fixture.CreateDbContext();
         var eventModel = await CreateEventAsync(db);
+        var user = await CreateUserAsync(db);
         var repository = CreateBookingRepository(db);
 
-        var booking = new BookingModel(eventModel.Id);
+        var booking = new BookingModel(eventModel.Id, user.Id);
 
         var created = await repository.CreateBookingAsync(booking);
+        await repository.SaveChangesAsync();
 
         created.Id.Should().NotBeEmpty();
         created.EventId.Should().Be(eventModel.Id);
@@ -61,6 +83,7 @@ public sealed class BookingRepositoryTests
 
         fromDb.Should().NotBeNull();
         fromDb!.EventId.Should().Be(eventModel.Id);
+        fromDb.UserId.Should().Be(user.Id);
         fromDb.Status.Should().Be(BookingStatus.Pending);
     }
 
@@ -71,16 +94,19 @@ public sealed class BookingRepositoryTests
 
         await using var db = _fixture.CreateDbContext();
         var eventModel = await CreateEventAsync(db);
+        var user = await CreateUserAsync(db);
         var repository = CreateBookingRepository(db);
 
         var booking = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
+        await repository.SaveChangesAsync();
 
         var result = await repository.GetBookingByIdAsync(booking.Id);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be(booking.Id);
         result.EventId.Should().Be(eventModel.Id);
+        result.UserId.Should().Be(user.Id);
         result.Status.Should().Be(BookingStatus.Pending);
     }
 
@@ -104,13 +130,16 @@ public sealed class BookingRepositoryTests
 
         await using var db = _fixture.CreateDbContext();
         var eventModel = await CreateEventAsync(db);
+        var user = await CreateUserAsync(db);
         var repository = CreateBookingRepository(db);
 
         var pending1 = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
 
         var pending2 = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
+
+        await repository.SaveChangesAsync();
 
         var result = await repository.GetPendingBookingsAsync();
 
@@ -127,16 +156,23 @@ public sealed class BookingRepositoryTests
 
         await using var db = _fixture.CreateDbContext();
         var eventModel = await CreateEventAsync(db);
+        var user = await CreateUserAsync(db);
         var repository = CreateBookingRepository(db);
 
         var pending1 = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
 
         var pending2 = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
 
-        var confirmedBooking  = new BookingModel(eventModel.Id);
+        // ВАЖНО: бронь нужно провести через CreateBookingAsync,
+        // чтобы EF Core вообще начал её отслеживать — иначе UpdateStatus()
+        // меняет объект только в памяти, а SaveChangesAsync() его не увидит
+        var confirmedBooking = await repository.CreateBookingAsync(
+            new BookingModel(eventModel.Id, user.Id));
+
         confirmedBooking.UpdateStatus(BookingStatus.Confirmed);
+        repository.UpdateBooking(confirmedBooking);
 
         await repository.SaveChangesAsync();
 
@@ -155,10 +191,11 @@ public sealed class BookingRepositoryTests
 
         await using var db = _fixture.CreateDbContext();
         var eventModel = await CreateEventAsync(db);
+        var user = await CreateUserAsync(db);
         var repository = CreateBookingRepository(db);
 
         var booking = await repository.CreateBookingAsync(
-            new BookingModel(eventModel.Id));
+            new BookingModel(eventModel.Id, user.Id));
 
         await repository.SaveChangesAsync();
 

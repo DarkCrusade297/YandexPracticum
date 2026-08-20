@@ -7,6 +7,7 @@ namespace Application.DTO.Bookings
     {
         public Guid Id { get; init; }
         public Guid EventId { get; init; }
+        public Guid UserId { get; init; }
         public BookingStatus Status { get; init; }
         public DateTime CreatedAt { get; init; }
         public DateTime? ProcessedAt { get; init; }
@@ -17,6 +18,7 @@ namespace Application.DTO.Bookings
             {
                 Id = model.Id,
                 EventId = model.EventId,
+                UserId = model.UserId,
                 Status = model.Status,
                 CreatedAt = model.CreatedAt,
                 ProcessedAt = model.ProcessedAt

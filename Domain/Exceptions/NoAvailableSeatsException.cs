@@ -1,14 +1,9 @@
 ﻿namespace Domain.Exceptions
 {
-    public class NoAvailableSeatsException : Exception
+    public class NoAvailableSeatsException : DomainException
     {
-        public NoAvailableSeatsException() { }
         public NoAvailableSeatsException(string message)
           : base(message)
-        {
-        }
-        public NoAvailableSeatsException(string message, Exception inner)
-          : base(message, inner)
         {
         }
     }
