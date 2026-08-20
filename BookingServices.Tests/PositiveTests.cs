@@ -406,6 +406,58 @@ namespace BookingServices.Tests
             Assert.Equal(1, secondUserBookingsCount);
         }
 
+        [Fact]
+        public async Task CancelBookingAsync_OtherUserTriesToCancel_ThrowsForbiddenOperationException()
+        {
+            var createEventDto = CreateDefaultEventDto(totalSeats: 10);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            var strangerId = await CreateAdditionalUserAsync("stranger-user");
+
+            await Assert.ThrowsAsync<ForbiddenOperationException>(() =>
+                _bookingService.CancelBookingAsync(booking.Id, strangerId, UserRoles.User));
+
+            var stillActive = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Pending, stillActive.Status);
+            Assert.Null(stillActive.ProcessedAt);
+
+            var eventAfter = await _eventService.GetEventAsync(createdEvent.Id);
+            Assert.Equal(9, eventAfter.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CancelBookingAsync_OwnerCancelsOwnBooking_ReturnsCancelledStatusAndReleasesSeat()
+        {
+            var createEventDto = CreateDefaultEventDto(totalSeats: 1);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            await _bookingService.CancelBookingAsync(booking.Id, _testUserId, UserRoles.User);
+
+            var cancelled = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Cancelled, cancelled.Status);
+            Assert.NotNull(cancelled.ProcessedAt);
+
+            var eventAfter = await _eventService.GetEventAsync(createdEvent.Id);
+            Assert.Equal(1, eventAfter.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CancelBookingAsync_AdminCancelsAnotherUsersBooking_ReturnsCancelledStatus()
+        {
+            var adminId = await CreateAdditionalUserAsync("admin-user", UserRoles.Admin);
+
+            var createEventDto = CreateDefaultEventDto(totalSeats: 10);
+            var createdEvent = await _eventService.CreateEventAsync(createEventDto);
+            var booking = await _bookingService.CreateBookingAsync(createdEvent.Id, _testUserId);
+
+            await _bookingService.CancelBookingAsync(booking.Id, adminId, UserRoles.Admin);
+
+            var cancelled = await _bookingService.GetBookingByIdAsync(booking.Id, _testUserId, UserRoles.User);
+            Assert.Equal(BookingStatus.Cancelled, cancelled.Status);
+            Assert.NotNull(cancelled.ProcessedAt);
+        }
 
         private static CreateEventDto CreateDefaultEventDto(int totalSeats)
         {
@@ -439,6 +491,17 @@ namespace BookingServices.Tests
         {
             _scope.Dispose();
             _serviceProvider.Dispose();
+        }
+
+        private async Task<Guid> CreateAdditionalUserAsync(string login, UserRoles role = UserRoles.User)
+        {
+            var passwordHash = _passwordService.Hash("Test-Password-123");
+            var user = new UserModel(Guid.NewGuid(), login, passwordHash, role);
+
+            var created = await _userRepository.CreateUserAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return created.Id;
         }
     }
 }
