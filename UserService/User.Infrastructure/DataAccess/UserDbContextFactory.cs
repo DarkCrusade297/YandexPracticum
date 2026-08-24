@@ -8,7 +8,7 @@ public sealed class UserDbContextFactory : IDesignTimeDbContextFactory<UserDbCon
     public UserDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<UserDbContext>()
-            .UseNpgsql("Host=localhost;Port=5432;Database=user_db;Username=postgres;Password=postgres")
+            .UseNpgsql("Host=localhost;Port=5432;Database=users;Username=postgres;Password=postgres")
             .Options;
         return new UserDbContext(options);
     }

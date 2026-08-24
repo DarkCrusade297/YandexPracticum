@@ -8,7 +8,7 @@ public sealed class BookingDbContextFactory : IDesignTimeDbContextFactory<Bookin
     public BookingDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<BookingDbContext>()
-            .UseNpgsql("Host=localhost;Port=5432;Database=booking_db;Username=postgres;Password=postgres")
+            .UseNpgsql("Host=localhost;Port=5434;Database=bookings;Username=postgres;Password=postgres")
             .Options;
         return new BookingDbContext(options);
     }
