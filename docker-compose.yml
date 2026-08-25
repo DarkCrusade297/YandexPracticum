@@ -113,6 +113,8 @@ services:
     depends_on:
       events-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     ports:
       - "5002:8080"
     environment:
@@ -121,6 +123,8 @@ services:
       InternalApi__Port: 8081
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__ConsumerGroup: event-service-booking-confirmed-v1
 
   booking-api:
     build:

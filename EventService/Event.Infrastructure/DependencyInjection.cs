@@ -1,5 +1,6 @@
 using Event.Application.Common.Interfaces;
 using Event.Infrastructure.DataAccess;
+using Event.Infrastructure.Messaging;
 using Event.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,16 @@ public static class DependencyInjection
         services.AddDbContext<EventDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<BookingConfirmedProcessor>();
+        services.AddOptions<KafkaOptions>()
+            .Bind(configuration.GetSection(KafkaOptions.SectionName))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.BootstrapServers),
+                "Kafka:BootstrapServers is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.ConsumerGroup),
+                "Kafka:ConsumerGroup is required.")
+            .ValidateOnStart();
+        services.AddHostedService<KafkaTopicInitializer>();
+        services.AddHostedService<BookingConfirmedConsumer>();
         return services;
     }
 }
