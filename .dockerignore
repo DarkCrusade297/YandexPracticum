@@ -1,6 +1,7 @@
 .git
 .idea
 .vs
+.env
 **/bin
 **/obj
 **/.DS_Store

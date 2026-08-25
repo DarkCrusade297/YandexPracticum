@@ -16,7 +16,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpGet("{id:guid}"), Authorize]
     public async Task<ActionResult<EventDto>> GetEventById(Guid id) => Ok(await eventService.GetEventAsync(id));
 
-    [HttpGet("/internal/events/{id:guid}")]
+    [HttpGet("/internal/events/{id:guid}"), ApiExplorerSettings(IgnoreApi = true)]
     public async Task<ActionResult<EventDto>> GetInternalEventById(Guid id) => Ok(await eventService.GetEventAsync(id));
 
     [HttpPost, Authorize(Roles = "Admin")]
@@ -40,14 +40,14 @@ public class EventsController(IEventService eventService) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("/internal/events/{id:guid}/reserve")]
+    [HttpPost("/internal/events/{id:guid}/reserve"), ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> ReserveSeat(Guid id)
     {
         await eventService.ReserveSeatsAsync(id);
         return NoContent();
     }
 
-    [HttpPost("/internal/events/{id:guid}/release")]
+    [HttpPost("/internal/events/{id:guid}/release"), ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> ReleaseSeat(Guid id)
     {
         await eventService.ReleaseSeatsAsync(id);

@@ -4,6 +4,7 @@ using Event.Presentation.Middleware;
 using Event.Presentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,18 +14,47 @@ builder.Services
     .AddEventInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Event Service API", Version = "v1" });
+    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT issued by UserService. Do not add the Bearer prefix."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    });
+});
 
-var jwtKey = builder.Configuration["JwtSettings:Secret"]
-    ?? throw new InvalidOperationException("JwtSettings:Secret is not configured.");
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var jwtKey = builder.Configuration["JwtSettings:Secret"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("JwtSettings:Secret must contain at least 32 bytes.");
+var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
+var jwtAudience = builder.Configuration["JwtSettings:Audience"];
+if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+    throw new InvalidOperationException("JwtSettings:Issuer and JwtSettings:Audience are required.");
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     });
+builder.Services.AddAuthorization();
+
+var internalApiPort = builder.Configuration.GetValue("InternalApi:Port", 8081);
 
 var app = builder.Build();
 
@@ -35,6 +65,19 @@ if (app.Environment.IsDevelopment())
 }
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.ApplyEventMigrations();
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/internal"), internalApi =>
+{
+    internalApi.Use(async (context, next) =>
+    {
+        if (context.Connection.LocalPort != internalApiPort)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        await next();
+    });
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

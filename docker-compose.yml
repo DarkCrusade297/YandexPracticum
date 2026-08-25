@@ -102,6 +102,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=users-db;Port=5432;Database=users;Username=postgres;Password=postgres
 
   event-api:
@@ -116,7 +117,9 @@ services:
       - "5002:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_URLS: http://+:8080;http://+:8081
+      InternalApi__Port: 8081
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres
 
   booking-api:
@@ -134,8 +137,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=bookings-db;Port=5432;Database=bookings;Username=postgres;Password=postgres
-      Services__EventService: http://event-api:8080/
+      Services__EventService: http://event-api:8081/
 
 volumes:
   users-db-data:
