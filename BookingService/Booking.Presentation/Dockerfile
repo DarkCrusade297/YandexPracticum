@@ -5,6 +5,7 @@ COPY ["BookingService/Booking.Presentation/Booking.Presentation.csproj", "Bookin
 COPY ["BookingService/Booking.Application/Booking.Application.csproj", "BookingService/Booking.Application/"]
 COPY ["BookingService/Booking.Infrastructure/Booking.Infrastructure.csproj", "BookingService/Booking.Infrastructure/"]
 COPY ["BookingService/Booking.Domain/Booking.Domain.csproj", "BookingService/Booking.Domain/"]
+COPY ["Messaging.Contracts/Messaging.Contracts.csproj", "Messaging.Contracts/"]
 RUN dotnet restore "BookingService/Booking.Presentation/Booking.Presentation.csproj"
 
 COPY . .
@@ -16,4 +17,3 @@ WORKDIR /app
 EXPOSE 8080
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Booking.Presentation.dll"]
-

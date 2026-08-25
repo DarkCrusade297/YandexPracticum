@@ -5,6 +5,7 @@ COPY ["EventService/Event.Presentation/Event.Presentation.csproj", "EventService
 COPY ["EventService/Event.Application/Event.Application.csproj", "EventService/Event.Application/"]
 COPY ["EventService/Event.Infrastructure/Event.Infrastructure.csproj", "EventService/Event.Infrastructure/"]
 COPY ["EventService/Event.Domain/Event.Domain.csproj", "EventService/Event.Domain/"]
+COPY ["Messaging.Contracts/Messaging.Contracts.csproj", "Messaging.Contracts/"]
 RUN dotnet restore "EventService/Event.Presentation/Event.Presentation.csproj"
 
 COPY . .
