@@ -9,11 +9,11 @@ namespace Event.Presentation.Controllers;
 [Route("events")]
 public class EventsController(IEventService eventService) : ControllerBase
 {
-    [HttpGet, Authorize]
+    [HttpGet, AllowAnonymous]
     public async Task<ActionResult<PaginatedResultDto>> GetAllEvents(string? title, DateTime? from, DateTime? to, int? page, int? pageSize) =>
         Ok(await eventService.GetAllEventsAsync(title, from, to, page, pageSize));
 
-    [HttpGet("{id:guid}"), Authorize]
+    [HttpGet("{id:guid}"), AllowAnonymous]
     public async Task<ActionResult<EventDto>> GetEventById(Guid id) => Ok(await eventService.GetEventAsync(id));
 
     [HttpGet("/internal/events/{id:guid}"), ApiExplorerSettings(IgnoreApi = true)]

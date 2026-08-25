@@ -2,6 +2,7 @@ using Event.Application;
 using Event.Infrastructure;
 using Event.Presentation.Middleware;
 using Event.Presentation;
+using Event.Presentation.OpenApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -30,6 +31,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference("bearer", document)] = []
     });
+    options.OperationFilter<AllowAnonymousOperationFilter>();
 });
 
 var jwtKey = builder.Configuration["JwtSettings:Secret"];
