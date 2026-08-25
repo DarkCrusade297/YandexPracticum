@@ -1,6 +1,6 @@
 using Booking.Application.Common.Interfaces;
 using Booking.Infrastructure.DataAccess;
-using Booking.Infrastructure.Gateways;
+using Booking.Infrastructure.Messaging;
 using Booking.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,9 +15,12 @@ public static class DependencyInjection
         services.AddDbContext<BookingDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
         services.AddScoped<IBookingRepository, BookingRepository>();
-        services.AddHttpClient<IEventGateway, EventHttpGateway>(client =>
-            client.BaseAddress = new Uri(configuration["Services:EventService"]
-                ?? throw new InvalidOperationException("Services:EventService is not configured.")));
+        services.AddOptions<KafkaOptions>()
+            .Bind(configuration.GetSection(KafkaOptions.SectionName))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.BootstrapServers),
+                "Kafka:BootstrapServers is required.")
+            .ValidateOnStart();
+        services.AddSingleton<IBookingConfirmedPublisher, KafkaBookingConfirmedPublisher>();
         return services;
     }
 }

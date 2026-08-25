@@ -130,8 +130,8 @@ services:
     depends_on:
       bookings-db:
         condition: service_healthy
-      event-api:
-        condition: service_started
+      kafka:
+        condition: service_healthy
     ports:
       - "5003:8080"
     environment:
@@ -139,7 +139,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=bookings-db;Port=5432;Database=bookings;Username=postgres;Password=postgres
-      Services__EventService: http://event-api:8081/
+      Kafka__BootstrapServers: kafka:29092
 
 volumes:
   users-db-data:

@@ -16,7 +16,6 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 NotFoundException => StatusCodes.Status404NotFound,
                 ArgumentException => StatusCodes.Status400BadRequest,
                 NoAvailableSeatsException or BookingCancelException or BookingLimitExceededException => StatusCodes.Status409Conflict,
-                EventAlreadyPassedException => StatusCodes.Status400BadRequest,
                 ForbiddenOperationException => StatusCodes.Status403Forbidden,
                 _ => StatusCodes.Status500InternalServerError
             };

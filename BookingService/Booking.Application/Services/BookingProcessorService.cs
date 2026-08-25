@@ -1,5 +1,4 @@
 using Booking.Application.Common.Interfaces;
-using Booking.Domain.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -40,15 +39,11 @@ public class BookingProcessorService : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-        var eventGateway = scope.ServiceProvider.GetRequiredService<IEventGateway>();
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-            var booking = await bookingService.GetBookingModelByIdAsync(bookingId);
-            await eventGateway.GetEventAsync(booking.EventId, cancellationToken);
-            await bookingService.UpdateBookingAsync(booking.Id);
+            await bookingService.UpdateBookingAsync(bookingId, cancellationToken);
         }
-        catch (NotFoundException) { await bookingService.RejectBookingAsync(bookingId); }
         catch (Exception ex) { _logger.LogError(ex, "Ошибка при обработке бронирования {BookingId}", bookingId); }
     }
 }

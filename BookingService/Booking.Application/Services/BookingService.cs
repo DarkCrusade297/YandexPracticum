@@ -3,19 +3,20 @@ using Booking.Application.DTO.Bookings;
 using Booking.Domain.Enums;
 using Booking.Domain.Exceptions;
 using Booking.Domain.Models;
+using Messaging.Contracts.Bookings;
 
 namespace Booking.Application.Services;
 
 public class BookingService : IBookingService
 {
-    private readonly IEventGateway _eventGateway;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IBookingConfirmedPublisher _bookingConfirmedPublisher;
     private static readonly SemaphoreSlim BookingLock = new(1, 1);
 
-    public BookingService(IEventGateway eventGateway, IBookingRepository bookingRepository)
+    public BookingService(IBookingRepository bookingRepository, IBookingConfirmedPublisher bookingConfirmedPublisher)
     {
-        _eventGateway = eventGateway;
         _bookingRepository = bookingRepository;
+        _bookingConfirmedPublisher = bookingConfirmedPublisher;
     }
 
     public async Task<BookingModel> GetBookingModelByIdAsync(Guid id)
@@ -34,28 +35,17 @@ public class BookingService : IBookingService
         await BookingLock.WaitAsync();
         try
         {
-            var ev = await _eventGateway.GetEventAsync(eventId);
-            if (ev.StartAt < DateTime.UtcNow) throw new EventAlreadyPassedException(eventId);
             var activeCount = await _bookingRepository.CountActiveBookingsByUserIdAsync(userId);
             if (activeCount >= BookingLimitExceededException.MaxActiveBookingsPerUser)
                 throw new BookingLimitExceededException(userId);
-            await _eventGateway.ReserveSeatAsync(eventId);
-            try
+            var created = await _bookingRepository.CreateBookingAsync(new BookingModel(eventId, userId));
+            return new CreatedBookingDto
             {
-                var created = await _bookingRepository.CreateBookingAsync(new BookingModel(eventId, userId));
-                return new CreatedBookingDto
-                {
-                    Id = created.Id,
-                    EventId = created.EventId,
-                    UserId = created.UserId,
-                    Status = created.Status
-                };
-            }
-            catch
-            {
-                await _eventGateway.ReleaseSeatAsync(eventId);
-                throw;
-            }
+                Id = created.Id,
+                EventId = created.EventId,
+                UserId = created.UserId,
+                Status = created.Status
+            };
         }
         finally { BookingLock.Release(); }
     }
@@ -76,9 +66,10 @@ public class BookingService : IBookingService
         finally { BookingLock.Release(); }
     }
 
-    public async Task UpdateBookingAsync(Guid bookingId)
+    public async Task UpdateBookingAsync(Guid bookingId, CancellationToken cancellationToken = default)
     {
-        await BookingLock.WaitAsync();
+        BookingConfirmed message;
+        await BookingLock.WaitAsync(cancellationToken);
         try
         {
             var booking = await _bookingRepository.GetBookingByIdAsync(bookingId)
@@ -86,23 +77,18 @@ public class BookingService : IBookingService
             booking.UpdateStatus(BookingStatus.Confirmed);
             _bookingRepository.UpdateBooking(booking);
             await _bookingRepository.SaveChangesAsync();
+            var confirmedAt = booking.ProcessedAt
+                ?? throw new InvalidOperationException($"Booking {booking.Id} has no processing timestamp.");
+            message = new BookingConfirmed(
+                booking.Id,
+                booking.EventId,
+                booking.UserId,
+                SeatCount: 1,
+                new DateTimeOffset(confirmedAt, TimeSpan.Zero));
         }
         finally { BookingLock.Release(); }
-    }
 
-    public async Task RejectBookingAsync(Guid bookingId)
-    {
-        await BookingLock.WaitAsync();
-        try
-        {
-            var booking = await _bookingRepository.GetBookingByIdAsync(bookingId)
-                ?? throw new NotFoundException($"Booking with id {bookingId} not found");
-            await _eventGateway.ReleaseSeatAsync(booking.EventId);
-            booking.UpdateStatus(BookingStatus.Rejected);
-            _bookingRepository.UpdateBooking(booking);
-            await _bookingRepository.SaveChangesAsync();
-        }
-        finally { BookingLock.Release(); }
+        await _bookingConfirmedPublisher.PublishAsync(message, cancellationToken);
     }
 
     public async Task CancelBookingAsync(Guid bookingId, Guid currentUserId, UserRoles currentUserRole)
@@ -116,7 +102,6 @@ public class BookingService : IBookingService
                 throw new ForbiddenOperationException($"User '{currentUserId}' has no permission to cancel booking '{bookingId}'");
             if (booking.Status == BookingStatus.Cancelled)
                 throw new BookingCancelException($"Booking with id {bookingId} already was cancelled");
-            await _eventGateway.ReleaseSeatAsync(booking.EventId);
             booking.UpdateStatus(BookingStatus.Cancelled);
             _bookingRepository.UpdateBooking(booking);
             await _bookingRepository.SaveChangesAsync();
