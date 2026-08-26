@@ -5,8 +5,8 @@ namespace User.Application.Services;
 public class PasswordService : IPasswordService
 {
     private const string Scheme = "pbkdf2-sha256";
-    private const int IterationCount = 600_000;
-    private const int MaximumAcceptedIterationCount = 1_000_000;
+    private const int IterationCount = 600000;
+    private const int MaximumAcceptedIterationCount = 1000000;
     private const int SaltSize = 16;
     private const int DerivedKeySize = 32;
 
