@@ -1,0 +1,151 @@
+services:
+  # ─────────────────────────── Инфраструктура обмена сообщениями ───────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: eventapi-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: eventapi-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      # Внешний listener для подключения с хоста (например, из dotnet run локально).
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Два listener'а: INTERNAL — для сервисов внутри сети Docker, EXTERNAL — для хоста.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:29092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # ─────────────────────────── Базы данных (по одной на сервис) ───────────────────────────
+  users-db:
+    image: postgres:16
+    container_name: eventapi-users-db
+    ports:
+    - "5432:5432"
+    environment:
+      POSTGRES_DB: users
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - users-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  events-db:
+    image: postgres:16
+    container_name: eventapi-events-db
+    ports:
+    - "5433:5432"
+    environment:
+      POSTGRES_DB: events
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - events-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bookings-db:
+    image: postgres:16
+    container_name: eventapi-bookings-db
+    ports:
+    - "5434:5432"
+    environment:
+      POSTGRES_DB: bookings
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - bookings-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  user-api:
+    build:
+      context: .
+      dockerfile: UserService/User.Presentation/Dockerfile
+    container_name: eventapi-user-api
+    depends_on:
+      users-db:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
+      ConnectionStrings__DefaultConnection: Host=users-db;Port=5432;Database=users;Username=postgres;Password=postgres
+
+  event-api:
+    build:
+      context: .
+      dockerfile: EventService/Event.Presentation/Dockerfile
+    container_name: eventapi-event-api
+    depends_on:
+      events-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080;http://+:8081
+      InternalApi__Port: 8081
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
+      ConnectionStrings__DefaultConnection: Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__ConsumerGroup: event-service-booking-confirmed-v1
+
+  booking-api:
+    build:
+      context: .
+      dockerfile: BookingService/Booking.Presentation/Dockerfile
+    container_name: eventapi-booking-api
+    depends_on:
+      bookings-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
+      ConnectionStrings__DefaultConnection: Host=bookings-db;Port=5432;Database=bookings;Username=postgres;Password=postgres
+      Kafka__BootstrapServers: kafka:29092
+
+volumes:
+  users-db-data:
+  events-db-data:
+  bookings-db-data:

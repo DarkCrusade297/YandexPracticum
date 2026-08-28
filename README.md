@@ -1,304 +1,169 @@
----
-# 🏗 Структура проекта
+# Event Manager System
 
-Решение (`.sln`) состоит из четырёх проектов, каждый из которых отвечает за свой уровень абстракции.
+Система управления пользователями, событиями и бронированиями, построенная на .NET как набор из трёх микросервисов. Каждый сервис владеет собственной PostgreSQL-базой, а подтверждённые брони передаются из Bookings в Events асинхронно через Kafka.
 
-```
+## Состав системы
+
+| Сервис | Что делает | API на хосте | Собственная база | Порт БД на хосте |
+|---|---|---:|---|---:|
+| **Users** | Регистрирует пользователей, проверяет учётные данные и выдаёт JWT | `5001` | PostgreSQL `users` | `5432` |
+| **Events** | Создаёт и изменяет события, хранит общее и доступное количество мест | `5002` | PostgreSQL `events` | `5433` |
+| **Bookings** | Создаёт, показывает, отменяет и фоново подтверждает брони | `5003` | PostgreSQL `bookings` | `5434` |
+
+Дополнительная инфраструктура:
+
+| Компонент | Назначение | Порт на хосте | Порт внутри Docker |
+|---|---|---:|---:|
+| Kafka | Передача интеграционных событий | `9092` | `29092` |
+| Zookeeper | Координация Kafka | — | `2181` |
+
+Сервисы не обращаются к чужим базам данных. Bookings также не вызывает Events по HTTP: уменьшение мест в штатном сценарии выполняется Events после получения Kafka-сообщения.
+
+### Swagger
+
+- Users: <http://localhost:5001/swagger>
+- Events: <http://localhost:5002/swagger>
+- Bookings: <http://localhost:5003/swagger>
+
+## Структура решения
+
+Каждый сервис разделён на слои Clean Architecture:
+
+```text
 EventManagerSystem.sln
-│
-├── Domain/                        ← ядро, не зависит ни от чего
-│   ├── Enums/
-│   ├── Exceptions/
-│   └── Models/
-│       ├── BookingModel.cs
-│       └── EventModel.cs
-│
-├── Application/                   ← зависит только от Domain
-│   ├── Common/
-│   ├── DTO/
-│   ├── Services/
-│   └── DependencyInjection.cs
-│
-├── Infrastructure/                ← зависит от Domain (и Application)
-│   ├── DataAccess/
-│   │   ├── Configurations/
-│   │   │   ├── BookingConfiguration/
-│   │   │   └── EventConfiguration/
-│   │   ├── Entities/
-│   │   │   ├── BookingEntity.cs
-│   │   │   └── EventEntity.cs
-│   │   ├── Mapper/
-│   │   │   ├── BookingMapper.cs
-│   │   │   └── EventMapper.cs
-│   │   └── AppDbContext.cs
-│   ├── Migrations/
-│   ├── Repositories/
-│   │   ├── Booking/
-│   │   └── Event/
-│   ├── DependencyInjection.cs
-│   └── MigrationExtensions.cs
-│
-└── EventManagerSystem/            ← точка входа, ASP.NET Core Web API
-    ├── Connected Services/
-    ├── Properties/
-    ├── Controllers/
-    ├── Exceptions/
-    ├── Middleware/
-    ├── appsettings.json
-    ├── EventManagerSystem.http
-    └── Program.cs
+├── UserService
+│   ├── User.Domain
+│   ├── User.Application
+│   ├── User.Infrastructure
+│   └── User.Presentation
+├── EventService
+│   ├── Event.Domain
+│   ├── Event.Application
+│   ├── Event.Infrastructure
+│   └── Event.Presentation
+├── BookingService
+│   ├── Booking.Domain
+│   ├── Booking.Application
+│   ├── Booking.Infrastructure
+│   └── Booking.Presentation
+└── Messaging.Contracts
 ```
 
-## 🎯 Правило зависимостей
+### Правило зависимостей
 
-Ключевой принцип Clean Architecture — зависимости всегда направлены **внутрь**, к домену, а не наружу:
+Зависимости направлены внутрь, к доменной модели:
 
-| Проект | Зависит от | Назначение |
+| Слой | Зависит от | Ответственность |
 |---|---|---|
-| **Domain** | *(ничего)* | Чистая бизнес-логика и модели, без ссылок на EF Core, ASP.NET или любую инфраструктуру |
-| **Application** | Domain | Сценарии использования (use cases), DTO для входных/выходных данных |
-| **Infrastructure** | Domain, Application | Реализация доступа к данным, внешние интеграции |
-| **EventManagerSystem** | Domain, Application, Infrastructure | Composition root — точка сборки всех слоёв в единое приложение |
+| **Domain** | Ни от чего | Доменные модели, перечисления, исключения и бизнес-правила |
+| **Application** | Domain | Сценарии использования, DTO и интерфейсы внешних зависимостей |
+| **Infrastructure** | Application, Domain | EF Core, PostgreSQL, Kafka, репозитории и реализации интерфейсов |
+| **Presentation** | Application, Infrastructure | HTTP API, DI, JWT, Swagger, middleware и запуск приложения |
 
-Такая структура позволяет менять детали реализации (например, PostgreSQL на другую СУБД, или EF Core на другой ORM) в `Infrastructure`, не затрагивая бизнес-логику в `Domain` и `Application`.
+`Messaging.Contracts` — отдельная библиотека с публичными контрактами сообщений. Она подключена к издателю и подписчику и не содержит внутренних моделей сервисов.
 
----
+### Domain
 
-## 📦 `Domain`
+Слой содержит чистую бизнес-логику без зависимостей от ASP.NET Core, EF Core и Kafka. Доменные модели защищают инварианты через закрытые сеттеры и методы изменения состояния: например, `BookingModel.UpdateStatus`, `EventModel.BookSeat` и `EventModel.ReleaseSeat`.
 
-Ядро приложения — не имеет зависимостей ни от одного другого проекта в решении.
+### Application
 
-- **`Models/`** — доменные модели (`BookingModel`, `EventModel`), инкапсулирующие бизнес-правила через приватные сеттеры и явные доменные методы (например, `UpdateStatus`).
-- **`Enums/`** — перечисления состояний домена (`BookingStatus` и др.).
-- **`Exceptions/`** — доменные исключения, сигнализирующие о нарушении бизнес-правил.
+Слой реализует сценарии работы сервиса:
 
-## 🧠 `Application`
+- DTO для входных и выходных данных;
+- прикладные сервисы;
+- интерфейсы репозиториев и издателей сообщений;
+- регистрацию прикладных зависимостей.
 
-Слой бизнес-логики и сценариев использования, зависит только от `Domain`.
+Именно здесь Bookings определяет абстракцию издателя `BookingConfirmed`, не привязывая бизнес-логику к конкретному Kafka-клиенту.
 
-- **`Services/`** — прикладные сервисы, реализующие сценарии работы с бронированиями и событиями.
-- **`DTO/`** — объекты передачи данных на границе слоя (входные команды и выходные представления).
-- **`Common/`** — общие вспомогательные абстракции и интерфейсы, используемые сервисами.
-- **`DependencyInjection.cs`** — регистрирует сервисы `Application` в контейнере DI (extension-метод, вызываемый из `Program.cs`).
+### Infrastructure
 
-## 🗄 `Infrastructure`
+Слой содержит технические реализации:
 
-Реализация доступа к данным и внешних интеграций, зависит от `Domain` и `Application`.
+- `DbContext`, persistence-сущности и конфигурации EF Core;
+- репозитории и маппинг между persistence- и domain-моделями;
+- миграции PostgreSQL;
+- Kafka producer в Bookings;
+- Kafka consumer, создание топика и Inbox в Events.
 
-- **`DataAccess/Entities/`** — отдельные persistence-модели EF Core (`BookingEntity`, `EventEntity`), намеренно отделённые от доменных моделей `Domain/Models`. Это классический паттерн разделения Domain Model / Persistence Model — он защищает домен от деталей ORM.
-- **`DataAccess/Configurations/`** — реализации `IEntityTypeConfiguration<TEntity>` для каждой сущности: имена таблиц, ограничения, конвертация enum-значений, индексы.
-- **`DataAccess/Mapper/`** — двусторонний маппинг между доменными моделями (`Domain/Models`) и persistence-сущностями (`Entities`), используемый репозиториями на входе и выходе.
-- **`DataAccess/AppDbContext.cs`** — контекст EF Core, объединяющий `DbSet<TEntity>` всех сущностей.
-- **`Migrations/`** — история миграций EF Core.
-- **`Repositories/`** — реализация репозиториев (`Booking`, `Event`) по паттерну **Unit of Work**: методы изменения состояния лишь помещают изменения в `ChangeTracker`, а фактическое сохранение в БД происходит только при явном вызове `SaveChangesAsync()`.
-- **`DependencyInjection.cs`** — регистрирует `AppDbContext` и репозитории в DI-контейнере.
-- **`MigrationExtensions.cs`** — extension-метод для применения миграций при старте приложения (обёртка над `Database.Migrate()` / `MigrateAsync()`).
+Репозитории работают как Unit of Work: изменения фиксируются вызовом `SaveChangesAsync`. Миграции автоматически применяются при старте соответствующего API.
 
-## 🌐 `EventManagerSystem` (host / Web API)
+### Presentation
 
-Точка входа приложения — **composition root**, где собираются вместе все три внутренних слоя.
+Точка входа каждого сервиса:
 
-- **`Controllers/`** — HTTP-эндпоинты API.
-- **`Middleware/`** — сквозная логика конвейера запросов (например, глобальная обработка исключений).
-- **`Exceptions/`** — обработка исключений на уровне HTTP (маппинг доменных исключений в коды ответа).
-- **`Program.cs`** — конфигурирует DI (вызывает `AddApplication()`, `AddInfrastructure()` из соответствующих проектов), настраивает middleware pipeline, применяет миграции через `MigrationExtensions`.
-- **`appsettings.json`** — конфигурация приложения, включая строку подключения к PostgreSQL.
-- **`Properties/`** — `launchSettings.json` для локального запуска.
-- **`EventManagerSystem.http`** — набор HTTP-запросов для ручного тестирования API прямо из IDE.
----
+- настраивает DI и middleware;
+- публикует HTTP-контроллеры;
+- проверяет JWT в Events и Bookings;
+- включает Swagger в окружении `Development`;
+- применяет миграции перед началом обработки запросов и фоновых задач.
 
-# Требования для запуска проекта
+## HTTP API
 
-Для запуска приложения требуется:
+Все примеры ниже используют адреса Docker Compose. Поля enum передаются и возвращаются строками: например, `User`, `Admin`, `Pending` и `Confirmed`.
 
-- установленный .NET SDK;
-- установленный и запущенный PostgreSQL.
+### Общие коды ошибок
 
-Приложение использует PostgreSQL в качестве основной базы данных, поэтому перед запуском необходимо убедиться, что сервер PostgreSQL доступен.
+| Код | Значение |
+|---:|---|
+| `400 Bad Request` | Некорректное тело запроса, параметры или учётные данные |
+| `401 Unauthorized` | JWT отсутствует, просрочен или не прошёл проверку |
+| `403 Forbidden` | Пользователь аутентифицирован, но не имеет нужной роли или доступа к ресурсу |
+| `404 Not Found` | Событие или бронь не найдены |
+| `409 Conflict` | Конфликт бизнес-правил: повторный логин, лимит активных броней или недопустимая отмена |
+| `500 Internal Server Error` | Неожиданная необработанная ошибка |
 
-Для запуска интеграционных тестов дополнительно требуется:
-
-- установленный Docker;
-- запущенный Docker Engine.
-
-Интеграционные тесты используют Testcontainers и поднимают временный контейнер PostgreSQL.
-
-# Настройка строки подключения к PostgreSQL
-
-Строка подключения к PostgreSQL указывается в конфигурационном файле приложения.
-
-Пример настройки строки подключения:
+Доменные ошибки возвращаются в формате `ProblemDetails`, например:
 
 ```json
 {
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=eventapi;Username=postgres;Password=postgres"
-  }
+  "status": 404,
+  "detail": "Event with id '...' not found"
 }
 ```
 
-# Управление схемой базы данных
+## Users API
 
-Схема базы данных управляется с помощью **миграций Entity Framework Core**.
+Users отвечает за регистрацию и выдачу JWT. Его эндпоинты не требуют авторизации.
 
-Миграции позволяют фиксировать изменения модели данных в коде и последовательно применять их к базе данных. Это предпочтительный способ управления схемой БД в проекте.
+| Метод и путь | Назначение | Успешный ответ | Основные ошибки |
+|---|---|---|---|
+| `POST /auth/register` | Регистрация пользователя | `201 Created` | `400`, `409`, `500` |
+| `POST /auth/login` | Проверка логина и пароля, выдача JWT | `200 OK` | `400`, `500` |
 
-При старте приложения схема базы данных создаётся и обновляется через механизм миграций EF Core с использованием метода:
+### Регистрация
 
-```csharp
-Database.Migrate();
+```http
+POST http://localhost:5001/auth/register
+Content-Type: application/json
 ```
-
-Это означает, что при запуске приложения EF Core применяет все ещё не применённые миграции к PostgreSQL.
-
-## Создание миграции
-
-Для создания новой миграции используйте команду:
-
-```bash
-dotnet ef migrations add InitialCreate --project EventManagerSystem
-```
-
-Где:
-
-- `InitialCreate` — имя миграции;
-- `--project EventManagerSystem` — проект, в котором находится `DbContext`.
-
-Пример создания следующей миграции:
-
-```bash
-dotnet ef migrations add AddBookings --project EventManagerSystem
-```
-
-## Применение миграций к базе данных
-
-Чтобы применить миграции к PostgreSQL вручную, используйте команду:
-
-```bash
-dotnet ef database update --project EventManagerSystem
-```
-
-После выполнения команды EF Core создаст или обновит схему базы данных в соответствии с миграциями.
-
-# Запуск и тестирование проекта
-
-## Сборка проекта
-
-Для того, чтобы выполнить сборку проекта, используйте команду:
-
-```bash
-dotnet build
-```
-
-## Запуск проекта
-
-Для запуска проекта используйте команду:
-
-```bash
-dotnet run
-```
-
-Перед запуском убедитесь, что:
-
-- PostgreSQL запущен;
-- строка подключения настроена корректно.
-
-При запуске приложения схема базы данных будет создана или обновлена через миграции EF Core с помощью `Migrate`.
-
-Также миграции можно применить вручную командой:
-
-```bash
-dotnet ef database update --project EventManagerSystem
-```
-
-## Запуск тестов
-
-Для запуска тестов используйте команду:
-
-```bash
-dotnet test
-```
-
-## Интеграционные тесты
-
-Интеграционные тесты выполняются на реальной базе данных PostgreSQL.
-
-Для этого используется **Testcontainers**: во время запуска тестов автоматически создаётся временный Docker-контейнер с PostgreSQL. Тесты подключаются к этой базе данных, применяют миграции EF Core через `MigrateAsync` и проверяют работу приложения с реальной PostgreSQL.
-
-Для запуска интеграционных тестов требуется установленный и запущенный **Docker**.
-
-Перед запуском тестов можно проверить доступность Docker:
-
-```bash
-docker --version
-```
-
-```bash
-docker ps
-```
-
-Если Docker не установлен или Docker Engine не запущен, интеграционные тесты завершатся ошибкой.
-
-Во время выполнения интеграционных тестов Testcontainers:
-
-- запускает временный контейнер PostgreSQL;
-- создаёт тестовую базу данных;
-- применяет миграции EF Core;
-- выполняет тесты;
-- удаляет контейнер после завершения тестов.
-
-# 🔐 Аутентификация и авторизация
-
-## Ролевая модель
-
-Система поддерживает две роли пользователей, определённые в перечислении `UserRoles`:
-
-| Роль | Права доступа |
-|---|---|
-| **User** | Базовая роль. Может создавать бронирования, просматривать собственные брони, отменять их. Не имеет доступа к управлению событиями и чужими бронированиями. |
-| **Admin** | Расширенная роль. Дополнительно может создавать/редактировать события, подтверждать (`Confirmed`) или отклонять (`Rejected`) любые бронирования, просматривать бронирования любого пользователя. |
-
-Роль сохраняется как строка в JWT-токене (сериализация через `JsonStringEnumConverter`) и проверяется на уровне контроллеров через атрибут `[Authorize(Roles = "Admin")]` для эндпоинтов, требующих повышенных прав. Эндпоинты без явного указания роли доступны любому аутентифицированному пользователю с валидным токеном.
-
-Регистрация через `POST /auth/register` по умолчанию создаёт пользователя с ролью **User**; назначение роли **Admin** выполняется отдельно (например, напрямую в базе данных или отдельным административным сценарием).
-
----
-
-## Получение JWT-токена через Swagger
-
-Чтобы вызывать защищённые эндпоинты API через Swagger UI, необходимо сначала получить токен и авторизовать сессию.
-
-### 1. Запустите приложение и откройте Swagger
-
-После `dotnet run` откроется браузер со страницей swagger
-
-
-### 2. Зарегистрируйте пользователя
-
-Разверните эндпоинт **`POST /auth/register`**, нажмите **Try it out** и отправьте тело запроса:
 
 ```json
 {
-  "login": "demo-user",
-  "password": "Demo-Password-123",
+  "login": "demo-admin",
+  "password": "Demo-Password-123!",
   "role": "Admin"
 }
 ```
 
-Успешный ответ — **201 Created**. Если логин уже занят, вернётся **409 Conflict**.
+Успешный ответ — `201 Created` без тела. Если логин занят, сервис вернёт `409 Conflict`. Текущий контракт позволяет явно передать роль `User` или `Admin`.
 
-### 3. Войдите и получите токен
+### Вход
 
-Разверните эндпоинт **`POST /auth/login`**, нажмите **Try it out** и отправьте те же учётные данные:
+```http
+POST http://localhost:5001/auth/login
+Content-Type: application/json
+```
 
 ```json
 {
-  "login": "demo-user",
-  "password": "Demo-Password-123"
+  "login": "demo-admin",
+  "password": "Demo-Password-123!"
 }
 ```
 
-В ответе (**200 OK**) придёт объект, содержащий JWT-токен:
+Ответ `200 OK`:
 
 ```json
 {
@@ -306,50 +171,295 @@ docker ps
 }
 ```
 
-Скопируйте значение поля `token` без кавычек.
+Неверные учётные данные приводят к `400 Bad Request`.
 
-### 4. Авторизуйте сессию Swagger
+## Events API
 
-Нажмите кнопку **Authorize** (значок замка 🔒 в правом верхнем углу страницы Swagger) и вставьте скопированный токен в открывшееся поле. Нажмите **Authorize**, затем **Close**.
+Чтение событий доступно без авторизации. Создавать, изменять и удалять события может только пользователь с ролью `Admin`.
 
-После этого все последующие запросы к защищённым эндпоинтам (например, создание бронирования) автоматически будут отправляться с заголовком `Authorization: Bearer <ваш токен>`, и авторизация будет проходить успешно.
+| Метод и путь | Авторизация | Назначение | Успешный ответ | Основные ошибки |
+|---|---|---|---|---|
+| `GET /events` | Не требуется | Список с фильтрами и пагинацией | `200 OK` | `500` |
+| `GET /events/{id}` | Не требуется | Получение события | `200 OK` | `404`, `500` |
+| `POST /events` | Admin | Создание события | `201 Created` | `400`, `401`, `403`, `500` |
+| `PUT /events/{id}` | Admin | Изменение события | `204 No Content` | `400`, `401`, `403`, `404`, `500` |
+| `DELETE /events/{id}` | Admin | Удаление события | `204 No Content` | `401`, `403`, `404`, `500` |
 
-> **Важно:** токен действителен ограниченное время (см. `ExpirationMinutes` в настройках ниже). После истечения срока действия Swagger продолжит подставлять старый токен — потребуется повторить шаг 3 и заново нажать **Authorize** с новым значением.
+`GET /events` поддерживает параметры `title`, `from`, `to`, `page` и `pageSize`. Значения пагинации по умолчанию: `page=1`, `pageSize=10`.
 
----
+### Создание события
 
-## Настройка секрета JWT
-
-Параметры формирования и валидации токенов задаются в секции `JwtSettings` файла `appsettings.json`:
+```http
+POST http://localhost:5002/events
+Authorization: Bearer <admin-jwt>
+Content-Type: application/json
+```
 
 ```json
 {
-  "JwtSettings": {
-    "Secret": "ваш-секретный-ключ-минимум-32-символа",
-    "Issuer": "EventManagerSystem",
-    "Audience": "EventManagerSystemClients",
-    "ExpirationMinutes": 60
-  }
+  "title": "Backend Meetup",
+  "description": "Kafka and microservices",
+  "startAt": "2026-09-01T18:00:00Z",
+  "endAt": "2026-09-01T21:00:00Z",
+  "totalSeats": 100
 }
 ```
 
-| Параметр | Назначение |
+Ответ `201 Created`:
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "title": "Backend Meetup",
+  "description": "Kafka and microservices",
+  "startAt": "2026-09-01T18:00:00Z",
+  "endAt": "2026-09-01T21:00:00Z",
+  "totalSeats": 100,
+  "availableSeats": 100
+}
+```
+
+### Получение списка
+
+```http
+GET http://localhost:5002/events?title=Backend&page=1&pageSize=10
+```
+
+Ответ `200 OK`:
+
+```json
+{
+  "total": 1,
+  "events": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "title": "Backend Meetup",
+      "description": "Kafka and microservices",
+      "startAt": "2026-09-01T18:00:00Z",
+      "endAt": "2026-09-01T21:00:00Z",
+      "totalSeats": 100,
+      "availableSeats": 100
+    }
+  ],
+  "currentPage": 1,
+  "pageSize": 10
+}
+```
+
+## Bookings API
+
+Все эндпоинты Bookings требуют JWT. Обычный пользователь может работать только со своими бронями; Admin может получать и отменять чужие.
+
+| Метод и путь | Назначение | Успешный ответ | Основные ошибки |
+|---|---|---|---|
+| `POST /events/{eventId}/book` | Создание брони | `202 Accepted` | `401`, `409`, `500` |
+| `GET /bookings/{id}` | Получение брони | `200 OK` | `401`, `403`, `404`, `500` |
+| `DELETE /bookings/{id}` | Отмена брони | `204 No Content` | `401`, `403`, `404`, `409`, `500` |
+
+### Создание брони
+
+```http
+POST http://localhost:5003/events/11111111-1111-1111-1111-111111111111/book
+Authorization: Bearer <user-jwt>
+```
+
+Ответ `202 Accepted` содержит заголовок `Location: /bookings/{id}` и бронь в начальном статусе:
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "eventId": "11111111-1111-1111-1111-111111111111",
+  "userId": "33333333-3333-3333-3333-333333333333",
+  "status": "Pending"
+}
+```
+
+Bookings обрабатывает ожидающие брони фоново. Проверка выполняется раз в 40 секунд, затем перед подтверждением применяется дополнительная задержка 5 секунд.
+
+### Получение подтверждённой брони
+
+```http
+GET http://localhost:5003/bookings/22222222-2222-2222-2222-222222222222
+Authorization: Bearer <user-jwt>
+```
+
+После фоновой обработки ответ `200 OK` выглядит так:
+
+```json
+{
+  "id": "22222222-2222-2222-2222-222222222222",
+  "eventId": "11111111-1111-1111-1111-111111111111",
+  "userId": "33333333-3333-3333-3333-333333333333",
+  "status": "Confirmed",
+  "createdAt": "2026-08-26T10:00:00Z",
+  "processedAt": "2026-08-26T10:00:45Z"
+}
+```
+
+## Аутентификация и авторизация
+
+Users подписывает JWT, а Events и Bookings проверяют подпись, issuer, audience и срок действия. Поэтому все API должны использовать одинаковые значения `JwtSettings:Secret`, `Issuer` и `Audience`.
+
+Роли:
+
+| Роль | Права |
 |---|---|
-| **Secret** | Ключ, которым подписываются и проверяются токены (алгоритм HMAC). Должен быть достаточно длинным и случайным. |
-| **Issuer** | Издатель токена (`iss`) — проверяется при валидации входящих запросов. |
-| **Audience** | Получатель токена (`aud`) — проверяется при валидации входящих запросов. |
-| **ExpirationMinutes** | Время жизни токена в минутах с момента выдачи. |
+| **User** | Создание брони, получение и отмена собственной брони |
+| **Admin** | Права User, управление событиями, получение и отмена любой брони |
 
-### ⚠️ Рекомендация для production
+Чтобы вызвать защищённый эндпоинт в Swagger:
 
-Значение `Secret` в примере конфигурации репозитория — **демонстрационное** и предназначено исключительно для локальной разработки. Перед развёртыванием в production обязательно:
+1. Зарегистрируйте пользователя через Users `POST /auth/register`.
+2. Получите токен через Users `POST /auth/login`.
+3. Откройте Swagger Events или Bookings.
+4. Нажмите **Authorize** и вставьте только значение токена, без префикса `Bearer`.
+5. Swagger самостоятельно добавит заголовок `Authorization: Bearer <token>`.
 
-- Сгенерируйте криптографически случайный секрет длиной **не менее 32 символов** (256 бит), например через:
-  ```bash
-  openssl rand -base64 32
-  ```
-- **Не храните** реальный секрет в `appsettings.json` внутри репозитория. Вместо этого используйте:
-  - переменные окружения (`JwtSettings__Secret`);
-  - `dotnet user-secrets` для локальной разработки;
-  - защищённое хранилище секретов в продакшне (Azure Key Vault, AWS Secrets Manager, HashiCorp Vault и т.п.).
-- Убедитесь, что один и тот же секрет не используется одновременно в разных окружениях (dev/staging/production) — компрометация одного окружения не должна ставить под угрозу остальные.
+После истечения срока действия токена выполните вход повторно и обновите значение в Swagger.
+
+## Поток BookingConfirmed
+
+Контракт расположен в `Messaging.Contracts` и содержит:
+
+```text
+BookingId, EventId, UserId, SeatCount, ConfirmedAt
+```
+
+Имя топика также вынесено в общий контракт: `booking-confirmed`.
+
+Поток данных:
+
+1. Bookings создаёт бронь со статусом `Pending`.
+2. Фоновый обработчик переводит бронь в `Confirmed` и сначала сохраняет это изменение в базе Bookings.
+3. Kafka producer сериализует `BookingConfirmed` в JSON и публикует его в `booking-confirmed`.
+4. Ключ сообщения — `EventId`: сообщения одного события попадают в один partition и обрабатываются по порядку.
+5. Events использует consumer group `event-service-booking-confirmed-v1` и получает каждое сообщение только одним экземпляром внутри группы.
+6. Для сообщения создаётся DI scope, в котором доступны scoped `EventDbContext` и репозиторий.
+7. Events проверяет Inbox по `BookingId`, находит событие и вызывает доменное списание `SeatCount` мест.
+8. Новое значение `AvailableSeats` и Inbox-запись сохраняются одной PostgreSQL-транзакцией.
+9. Kafka offset фиксируется после успешной обработки. При повторной доставке Inbox предотвращает повторное списание.
+
+Если событие отсутствует, мест недостаточно или `SeatCount` некорректен, сообщение логируется и явно пропускается. Повреждённый JSON также пропускается без остановки consumer. При неожиданной технической ошибке offset не подтверждается, consumer возвращается к сообщению и повторяет его после задержки.
+
+Events при запуске пытается создать топик с помощью Kafka AdminClient. Уже существующий топик считается нормальным состоянием, а ошибка создания логируется и не блокирует запуск API.
+
+## Запуск через Docker Compose
+
+### Требования
+
+- Docker Desktop или Docker Engine;
+- Docker Compose;
+- свободные порты `5001–5003`, `5432–5434` и `9092`.
+
+.NET SDK и локальный PostgreSQL для запуска через Compose не требуются: API собираются в Docker, базы поднимаются отдельными контейнерами.
+
+### Настройка JWT-секрета
+
+Создайте `.env` на основе `.env.example`.
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Bash:
+
+```bash
+cp .env.example .env
+```
+
+Заполните переменную секретом длиной не менее 32 байт:
+
+```dotenv
+JWT_SECRET=replace-with-a-random-secret-at-least-32-bytes-long
+```
+
+Не добавляйте `.env` с реальным секретом в Git.
+
+### Запуск
+
+```bash
+docker compose up --build -d
+```
+
+При запуске Compose:
+
+- поднимает Zookeeper, Kafka и три PostgreSQL-базы;
+- ждёт успешных healthcheck зависимостей;
+- запускает три API;
+- применяет миграции EF Core;
+- создаёт топик `booking-confirmed`, если он отсутствует;
+- запускает фоновые обработчики Bookings и Events.
+
+Проверить состояние:
+
+```bash
+docker compose ps
+```
+
+Посмотреть логи:
+
+```bash
+docker compose logs -f
+```
+
+Логи Kafka-потока:
+
+```bash
+docker compose logs -f booking-api event-api
+```
+
+Посмотреть сообщения топика:
+
+```bash
+docker compose exec kafka kafka-console-consumer --bootstrap-server localhost:29092 --topic booking-confirmed --from-beginning --property print.key=true --property print.partition=true --property print.offset=true --property key.separator=" | "
+```
+
+Остановить просмотр можно сочетанием `Ctrl+C`.
+
+### Остановка
+
+Остановить контейнеры и сохранить данные в Docker volumes:
+
+```bash
+docker compose down
+```
+
+Удалить контейнеры вместе с данными трёх PostgreSQL-баз:
+
+```bash
+docker compose down -v
+```
+
+> `docker compose down -v` безвозвратно удаляет локальные данные PostgreSQL этого Compose-проекта.
+
+## Миграции EF Core
+
+Каждый сервис владеет собственным `DbContext` и набором миграций. При старте API вызывает `Database.Migrate()`, поэтому ожидающие миграции применяются автоматически.
+
+Для ручного создания миграции нужен .NET SDK и `dotnet-ef`. Примеры:
+
+```bash
+dotnet ef migrations add MigrationName --project UserService/User.Infrastructure --startup-project UserService/User.Presentation
+dotnet ef migrations add MigrationName --project EventService/Event.Infrastructure --startup-project EventService/Event.Presentation
+dotnet ef migrations add MigrationName --project BookingService/Booking.Infrastructure --startup-project BookingService/Booking.Presentation
+```
+
+Применение миграции вручную выполняется аналогично командой `dotnet ef database update` с нужными `--project` и `--startup-project`.
+
+## Сборка и тесты
+
+Собрать решение при установленном .NET SDK:
+
+```bash
+dotnet build EventManagerSystem.sln
+```
+
+Запустить тесты:
+
+```bash
+dotnet test EventManagerSystem.sln
+```
+
+Интеграционные тесты используют реальный PostgreSQL через Testcontainers. Для них Docker Engine должен быть запущен; временные контейнеры и тестовые базы создаются и удаляются автоматически.
