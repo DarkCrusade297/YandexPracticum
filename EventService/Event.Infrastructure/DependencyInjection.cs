@@ -22,6 +22,10 @@ public static class DependencyInjection
 
         var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
         redisOptions.AbortOnConnectFail = false;
+        redisOptions.BacklogPolicy = BacklogPolicy.FailFast;
+        redisOptions.ConnectRetry = 1;
+        redisOptions.ConnectTimeout = 1_000;
+        redisOptions.AsyncTimeout = 1_000;
 
         services.AddDbContext<EventDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
