@@ -17,13 +17,14 @@ public class EventService(
     ILogger<EventService> logger) : IEventService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-    private readonly TimeSpan _eventCacheTtl = TimeSpan.FromMinutes(cacheOptions.Value.EventTtlMinutes);
+    private readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(cacheOptions.Value.EventTtlMinutes);
 
     public async Task<EventDto> CreateEventAsync(CreateEventDto dto)
     {
         var ev = new EventModel(dto.Title, dto.Description, dto.StartAt, dto.EndAt, dto.TotalSeats);
         await eventRepository.CreateEventAsync(ev);
         await eventRepository.SaveChangesAsync();
+        await cacheService.RemoveAsync(EventCacheKeys.Top10);
         return EventDto.FromDomain(ev);
     }
 
@@ -32,7 +33,7 @@ public class EventService(
         var ev = await GetModelAsync(id);
         eventRepository.DeleteEvent(ev);
         await eventRepository.SaveChangesAsync();
-        await cacheService.RemoveAsync(EventCacheKeys.ById(id));
+        await InvalidateEventCachesAsync(id);
     }
 
     public async Task<PaginatedResultDto> GetAllEventsAsync(string? title, DateTime? from, DateTime? to, int? page, int? pageSize)
@@ -77,8 +78,37 @@ public class EventService(
         await cacheService.SetAsync(
             cacheKey,
             JsonSerializer.Serialize(eventDto, SerializerOptions),
-            _eventCacheTtl);
+            _cacheTtl);
         return eventDto;
+    }
+
+    public async Task<IReadOnlyList<TopEventDto>> GetTopEventsAsync()
+    {
+        var cachedValue = await cacheService.GetAsync(EventCacheKeys.Top10);
+        if (cachedValue is not null)
+        {
+            try
+            {
+                var cachedEvents = JsonSerializer.Deserialize<List<TopEventDto>>(cachedValue, SerializerOptions);
+                if (cachedEvents is not null)
+                    return cachedEvents;
+            }
+            catch (JsonException exception)
+            {
+                logger.LogWarning(exception, "Cached top events contain invalid JSON");
+            }
+
+            await cacheService.RemoveAsync(EventCacheKeys.Top10);
+        }
+
+        var topEvents = (await eventRepository.GetTopEventsAsync(10))
+            .Select(TopEventDto.FromEvent)
+            .ToList();
+        await cacheService.SetAsync(
+            EventCacheKeys.Top10,
+            JsonSerializer.Serialize(topEvents, SerializerOptions),
+            _cacheTtl);
+        return topEvents;
     }
 
     public async Task ReserveSeatsAsync(Guid id, int count = 1)
@@ -87,7 +117,7 @@ public class EventService(
         ev.BookSeat(count);
         eventRepository.UpdateEvent(ev);
         await eventRepository.SaveChangesAsync();
-        await cacheService.RemoveAsync(EventCacheKeys.ById(id));
+        await InvalidateEventCachesAsync(id);
     }
 
     public async Task ReleaseSeatsAsync(Guid id, int count = 1)
@@ -96,7 +126,7 @@ public class EventService(
         ev.ReleaseSeat(count);
         eventRepository.UpdateEvent(ev);
         await eventRepository.SaveChangesAsync();
-        await cacheService.RemoveAsync(EventCacheKeys.ById(id));
+        await InvalidateEventCachesAsync(id);
     }
 
     public async Task<EventDto> UpdateEventAsync(Guid id, UpdateEventDto dto)
@@ -108,8 +138,14 @@ public class EventService(
         model.UpdateEvent(dto.Title!, dto.Description, dto.StartAt!.Value, dto.EndAt!.Value);
         eventRepository.UpdateEvent(model);
         await eventRepository.SaveChangesAsync();
-        await cacheService.RemoveAsync(EventCacheKeys.ById(id));
+        await InvalidateEventCachesAsync(id);
         return EventDto.FromDomain(model);
+    }
+
+    private async Task InvalidateEventCachesAsync(Guid id)
+    {
+        await cacheService.RemoveAsync(EventCacheKeys.ById(id));
+        await cacheService.RemoveAsync(EventCacheKeys.Top10);
     }
 
     private async Task<EventModel> GetModelAsync(Guid id) =>
