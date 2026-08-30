@@ -89,6 +89,15 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: eventapi-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   user-api:
     build:
       context: .
@@ -115,6 +124,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "5002:8080"
     environment:
@@ -123,6 +134,7 @@ services:
       InternalApi__Port: 8081
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres
+      Redis__ConnectionString: redis:6379
       Kafka__BootstrapServers: kafka:29092
       Kafka__ConsumerGroup: event-service-booking-confirmed-v1
 

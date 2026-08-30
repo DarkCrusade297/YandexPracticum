@@ -15,9 +15,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddEventInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var redisConnectionString = configuration.GetConnectionString("Redis");
+        var redisSection = configuration.GetSection(EventCacheOptions.SectionName);
+        var redisConnectionString = redisSection["ConnectionString"];
         if (string.IsNullOrWhiteSpace(redisConnectionString))
-            throw new InvalidOperationException("ConnectionStrings:Redis is required.");
+            throw new InvalidOperationException("Redis:ConnectionString is required.");
 
         var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
         redisOptions.AbortOnConnectFail = false;
@@ -28,9 +29,11 @@ public static class DependencyInjection
             ConnectionMultiplexer.Connect(redisOptions));
         services.AddSingleton<ICacheService, RedisCacheService>();
         services.AddOptions<EventCacheOptions>()
-            .Bind(configuration.GetSection(EventCacheOptions.SectionName))
+            .Bind(redisSection)
             .Validate(options => options.EventTtlMinutes > 0,
-                "Cache:EventTtlMinutes must be greater than zero.")
+                "Redis:EventTtlMinutes must be greater than zero.")
+            .Validate(options => options.TopEventsTtlMinutes > 0,
+                "Redis:TopEventsTtlMinutes must be greater than zero.")
             .ValidateOnStart();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<BookingConfirmedProcessor>();

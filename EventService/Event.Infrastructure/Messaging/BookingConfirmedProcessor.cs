@@ -57,10 +57,7 @@ public sealed class BookingConfirmedProcessor(
         await transaction.CommitAsync(cancellationToken);
 
         if (result == BookingConfirmedProcessingResult.Processed)
-        {
             await cacheService.RemoveAsync(EventCacheKeys.ById(message.EventId));
-            await cacheService.RemoveAsync(EventCacheKeys.Top10);
-        }
 
         return result;
     }
