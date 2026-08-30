@@ -1,4 +1,6 @@
+using Event.Application.Common.Caching;
 using Event.Application.Common.Interfaces;
+using Event.Infrastructure.Caching;
 using Event.Infrastructure.DataAccess;
 using Event.Infrastructure.Messaging;
 using Event.Infrastructure.Repositories;
@@ -17,10 +19,19 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("ConnectionStrings:Redis is required.");
 
+        var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+        redisOptions.AbortOnConnectFail = false;
+
         services.AddDbContext<EventDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
         services.AddSingleton<IConnectionMultiplexer>(_ =>
-            ConnectionMultiplexer.Connect(redisConnectionString));
+            ConnectionMultiplexer.Connect(redisOptions));
+        services.AddSingleton<ICacheService, RedisCacheService>();
+        services.AddOptions<EventCacheOptions>()
+            .Bind(configuration.GetSection(EventCacheOptions.SectionName))
+            .Validate(options => options.EventTtlMinutes > 0,
+                "Cache:EventTtlMinutes must be greater than zero.")
+            .ValidateOnStart();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<BookingConfirmedProcessor>();
         services.AddOptions<KafkaOptions>()

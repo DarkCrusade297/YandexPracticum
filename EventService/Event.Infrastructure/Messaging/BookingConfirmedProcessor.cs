@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Event.Application.Common.Caching;
 using Event.Application.Common.Interfaces;
 using Event.Domain.Exceptions;
 using Event.Infrastructure.DataAccess;
@@ -8,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Event.Infrastructure.Messaging;
 
-public sealed class BookingConfirmedProcessor(EventDbContext db, IEventRepository eventRepository)
+public sealed class BookingConfirmedProcessor(
+    EventDbContext db,
+    IEventRepository eventRepository,
+    ICacheService cacheService)
 {
     public async Task<BookingConfirmedProcessingResult> ProcessAsync(
         BookingConfirmed message,
@@ -51,6 +55,10 @@ public sealed class BookingConfirmedProcessor(EventDbContext db, IEventRepositor
         db.ProcessedBookings.Add(CreateProcessedBooking(message));
         await eventRepository.SaveChangesAsync();
         await transaction.CommitAsync(cancellationToken);
+
+        if (result == BookingConfirmedProcessingResult.Processed)
+            await cacheService.RemoveAsync(EventCacheKeys.ById(message.EventId));
+
         return result;
     }
 
