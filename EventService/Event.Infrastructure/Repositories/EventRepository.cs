@@ -24,6 +24,18 @@ public class EventRepository(EventDbContext db) : IEventRepository
     public async Task<IEnumerable<EventModel>> GetAllEventsAsync() =>
         (await db.Events.AsNoTracking().ToListAsync()).Select(EventMapper.ToDomain).ToList();
 
+    public async Task<IReadOnlyList<EventModel>> GetTopEventsAsync(int count) =>
+        (await db.Events
+            .AsNoTracking()
+            .OrderByDescending(e => e.TotalSeats > 0
+                ? (double)(e.TotalSeats - e.AvailableSeats) / e.TotalSeats
+                : 0d)
+            .ThenBy(e => e.Id)
+            .Take(count)
+            .ToListAsync())
+        .Select(EventMapper.ToDomain)
+        .ToList();
+
     public void UpdateEvent(EventModel model)
     {
         var entity = db.Events.Local.FirstOrDefault(e => e.Id == model.Id)

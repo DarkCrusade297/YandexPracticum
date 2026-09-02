@@ -16,6 +16,10 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpGet("{id:guid}"), AllowAnonymous]
     public async Task<ActionResult<EventDto>> GetEventById(Guid id) => Ok(await eventService.GetEventAsync(id));
 
+    [HttpGet("top"), AllowAnonymous]
+    public async Task<ActionResult<IReadOnlyList<TopEventDto>>> GetTopEvents() =>
+        Ok(await eventService.GetTopEventsAsync());
+
     [HttpGet("/internal/events/{id:guid}"), ApiExplorerSettings(IgnoreApi = true)]
     public async Task<ActionResult<EventDto>> GetInternalEventById(Guid id) => Ok(await eventService.GetEventAsync(id));
 

@@ -7,6 +7,7 @@ public interface IEventRepository
     Task<EventModel> CreateEventAsync(EventModel ev);
     Task<EventModel?> GetEventByIdAsync(Guid id);
     Task<IEnumerable<EventModel>> GetAllEventsAsync();
+    Task<IReadOnlyList<EventModel>> GetTopEventsAsync(int count);
     void UpdateEvent(EventModel ev);
     void DeleteEvent(EventModel ev);
     Task SaveChangesAsync();
