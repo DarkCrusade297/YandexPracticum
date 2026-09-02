@@ -111,6 +111,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      Otlp__Endpoint: http://jaeger:4317
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=users-db;Port=5432;Database=users;Username=postgres;Password=postgres
 
@@ -130,6 +131,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080;http://+:8081
       InternalApi__Port: 8081
+      Otlp__Endpoint: http://jaeger:4317
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres
       Redis__ConnectionString: redis:6379
@@ -151,11 +153,40 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      Otlp__Endpoint: http://jaeger:4317
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
       ConnectionStrings__DefaultConnection: Host=bookings-db;Port=5432;Database=bookings;Username=postgres;Password=postgres
       Kafka__BootstrapServers: kafka:29092
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: eventapi-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: eventapi-jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: eventapi-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
 
 volumes:
   users-db-data:
   events-db-data:
   bookings-db-data:
+  grafana-data:
