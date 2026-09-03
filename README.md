@@ -363,7 +363,7 @@ Events при запуске пытается создать топик с по�
 
 - Docker Desktop или Docker Engine;
 - Docker Compose;
-- свободные порты `5001–5003`, `5432–5434` и `9092`.
+- свободные порты `3000`, `4317`, `5001–5003`, `5432–5434`, `9090`, `9092` и `16686`.
 
 .NET SDK и локальный PostgreSQL для запуска через Compose не требуются: API собираются в Docker, базы поднимаются отдельными контейнерами.
 
@@ -440,13 +440,34 @@ docker compose exec kafka kafka-console-consumer --bootstrap-server localhost:29
 docker compose down
 ```
 
-Удалить контейнеры вместе с данными трёх PostgreSQL-баз:
+Удалить контейнеры вместе с данными трёх PostgreSQL-баз и Grafana:
 
 ```bash
 docker compose down -v
 ```
 
-> `docker compose down -v` безвозвратно удаляет локальные данные PostgreSQL этого Compose-проекта.
+> `docker compose down -v` безвозвратно удаляет локальные данные PostgreSQL и состояние Grafana этого Compose-проекта.
+
+## Наблюдаемость
+
+Стек наблюдаемости запускается вместе с основными сервисами по инструкции из раздела [«Запуск через Docker Compose»](#запуск-через-docker-compose).
+
+В систему входят:
+
+- **OpenTelemetry** — собирает трейсы входящих и исходящих HTTP-запросов, запросов EF Core, метрики ASP.NET Core и рантайма .NET;
+- **Prometheus** — скрейпит эндпоинт `/metrics` каждого API по настройкам из `prometheus.yml`;
+- **Jaeger** — принимает трейсы по OTLP gRPC и отображает их отдельно для `users-service`, `events-service` и `bookings-service`;
+- **Grafana** — визуализирует метрики и сохраняет своё состояние в Docker volume `grafana-data`;
+- **Serilog** — выводит логи приложений в stdout как отдельные JSON-объекты в формате Compact JSON.
+
+| Инструмент | Адрес | Назначение |
+|---|---|---|
+| Prometheus | <http://localhost:9090> | Запросы и состояние сбора метрик |
+| Jaeger | <http://localhost:16686> | Поиск и просмотр распределённых трейсов |
+| Grafana | <http://localhost:3000> | Дашборды и визуализация метрик |
+| OTLP gRPC | `localhost:4317` | Приём трейсов Jaeger с хоста |
+
+Для первого входа в Grafana используйте имя пользователя `admin` и пароль `admin`. Источник данных Prometheus автоматически не создаётся: добавьте его в Grafana вручную, указав внутренний адрес `http://prometheus:9090`.
 
 ## Миграции EF Core
 
